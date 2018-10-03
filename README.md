@@ -18,7 +18,10 @@
 - Install kustomize
   - [kustomize](https://github.com/kubernetes-sigs/kustomize)
 
-  
+## Additional Resources
+
+- [http://book.kubebuilder.io](http://book.kubebuilder.io)
+
 ## Create a new Go Project
 
 Example:
@@ -74,4 +77,4 @@ Example:
   - Example: [Node Conditions](https://kubernetes.io/docs/concepts/architecture/nodes/#condition)
 - Setup Defaulting and complex Validation
   - [Webhook docs](https://book.kubebuilder.io/beyond_basics/what_is_a_webhook.html)
-  
+- Adopt objects if the parent is deleted / recreated without Garbage Collection
