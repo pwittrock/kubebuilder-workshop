@@ -19,6 +19,8 @@ spec:
   storage: 100Gi
 ```
 
+The Template to create a StatefuleSet and Service for running a MongoDB instance will be provided as Go functions.
+
 ## Goals
 
 - Define a new Kubernetes API for running MongoDB instances
@@ -114,7 +116,7 @@ Add optional fields for users to specify when creating MongoDB instances - for e
 - `replicas` (int32)
 - `storage` (string)
 
-To make them optional:
+To make them optional do the following:
 
 - set `// +optional`
 - make them pointers with `*`
@@ -136,290 +138,39 @@ Example Spec for Kubernetes Pods:
 
 ## Implement the MongoDB Controller
 
-- quickly skim the [blogpost on running MongoDB as a StatefulSet on Kubernetes](https://kubernetes.io/blog/2017/01/running-mongodb-on-kubernetes-with-statefulsets/)
-  for background information - don't use the actual StatefulSet and Service, we will do something different.
-- edit `pkg/controller/mongodb/mongodb_controller.go`
-- remove the Deployment creation code
-- replace with StatefulSet and Service creation code
-- *do not* copy the labels from the blogpost directly, use something based off the instance name
-- optional: update labels and selectors to be more correct
-- update RBAC annotations on the Reconcile function with StatefuleSet and Service
+- Edit `pkg/controller/mongodb/mongodb_controller.go`
+- Update the Watch statements in `add`
+- Copy the Helper functions to generate StatefulSets and Services for MongoDB
+- Update the Resources that get created in `Reconcile`
+- Update the RBAC directives for StatefulSets and Services
 
 ### Update the Watch config
 
-- Watch MongoDB (generated for you)
-- Watch Services - and map to the Owning MongoDB instance (because we will generate them)
-- Watch StatefulSets - and map to the Owning MongoDB instance (because we will generate them)
-- (Delete Watch for Deployments because we don't generate them)
+Update the `add` function to Watch the Resources you will generate from the Controller (Service + StatefulSet)
 
-Try to do it on your own first - but it should look something like this:
+- (No-Op) Watch MongoDB (EnqueueRequestForObject) - this was done for you
+- Add Watch Services - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you need to add this
+- Add Watch StatefulSets - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you need to add this
+- Delete Watch Deployments
 
-```go
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
-	// Create a new controller
-	c, err := controller.New("mongodb-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
+### Generate Service and StatefulSet objects from the MongoDB instance
 
-	err = c.Watch(&source.Kind{Type: &databasesv1alpha1.MongoDB{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return err
-	}
-
-	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &databasesv1alpha1.MongoDB{},
-	})
-	if err != nil {
-		return err
-	}
-
-	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &databasesv1alpha1.MongoDB{},
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-```
-
-### Generate a StatefulSet from the MongoDB instance
-
-Copy this helper function to save time instead of writing it yourself.
-
-This function creates a new appsv1.StatefulSet Datastructure with the Name+Namespace, Labels, Selector,
-PodTemplate, ServiceName and Replicas set.
-
-
-```go
-func GetStatefuleSet(instance *databasesv1alpha1.MongoDB) *appsv1.StatefulSet {
-    gracePeriodTerm := int64(10)
-
-    // TODO: Default and Validate these with Webhooks
-    if instance.Spec.Replicas == nil {
-        r := int32(1)
-        instance.Spec.Replicas = &r
-    }
-    if instance.Spec.Storage == nil {
-        s := "100Gi"
-        instance.Spec.Storage = &s
-    }
-    if instance.Labels == nil {
-        instance.Labels = map[string]string{}
-    }
-
-    labels := map[string]string{}
-    for k, v := range instance.Labels {
-        labels[k] = v
-    }
-    labels["mongodb-statefuleset"] = instance.Name
-
-    rl := corev1.ResourceList{}
-    rl["storage"] = resource.MustParse(*instance.Spec.Storage)
-
-    pvc := corev1.PersistentVolumeClaim{
-        ObjectMeta: metav1.ObjectMeta{Name: "mongo-persistent-storage"},
-        Spec: corev1.PersistentVolumeClaimSpec{
-            AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
-            Resources: corev1.ResourceRequirements{
-                Requests: rl,
-            },
-        },
-    }
-
-    stateful := &appsv1.StatefulSet{
-        ObjectMeta: metav1.ObjectMeta{
-            Name:      instance.Name + "-mongodb-statefulset",
-            Namespace: instance.Namespace,
-            Labels:    labels,
-        },
-        Spec: appsv1.StatefulSetSpec{
-            Selector: &metav1.LabelSelector{
-                MatchLabels: map[string]string{"statefulset": instance.Name + "-mongodb-statefulset"},
-            },
-            ServiceName: "mongo",
-            Replicas:    instance.Spec.Replicas,
-            Template: corev1.PodTemplateSpec{
-                ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"statefulset": instance.Name + "-mongodb-statefulset"}},
-
-                Spec: corev1.PodSpec{
-                    TerminationGracePeriodSeconds: &gracePeriodTerm,
-                    Containers: []corev1.Container{
-                        {
-                            Name:         "mongo",
-                            Image:        "mongo",
-                            Command:      []string{"mongod", "--replSet", "rs0", "--smallfiles", "--noprealloc", "--bind_ip_all"},
-                            Ports:        []corev1.ContainerPort{{ContainerPort: 27017}},
-                            VolumeMounts: []corev1.VolumeMount{{Name: "mongo-persistent-storage", MountPath: "/data/db"}},
-                        },
-                        {
-                            Name:  "mongo-sidecar",
-                            Image: "cvallance/mongo-k8s-sidecar",
-                            Env:   []corev1.EnvVar{{Name: "MONGO_SIDECAR_POD_LABELS", Value: "role=mongo,environment=test"}},
-                        },
-                    },
-                },
-            },
-            VolumeClaimTemplates: []corev1.PersistentVolumeClaim{pvc},
-        },
-    }
-    return stateful
-}
-```
-
-### Generate a Service from the MongoDB instance
-
-Copy this helper function to save time instead of writing it yourself.
-
-This function creates a new corev1.Service Datastructure with the Name+Namespace, Labels, Selector and Port set.
-
-```go
-// GetService returns the desired generated Service for the MongoDB instance
-func GetService(instance *databasesv1alpha1.MongoDB) *corev1.Service {
-	// TODO: Default and Validate these with Webhooks
-	if instance.Labels == nil {
-		instance.Labels = map[string]string{}
-	}
-	labels := map[string]string{}
-	for k, v := range instance.Labels {
-		labels[k] = v
-	}
-	labels["mongodb-service"] = instance.Name
-
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name + "-mongodb-service",
-			Namespace: instance.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{Port: 27017, TargetPort: intstr.IntOrString{IntVal: 27017, Type: intstr.Int}},
-			},
-			Selector: map[string]string{"statefulset": instance.Name + "-mongodb-statefulset"},
-		},
-	}
-	return service
-}
-```
-
-### Create or Update the generated Objects
-
-Copy this helper function to reduce boilerplate.  It takes a function to determine if the generated
-object matches the live copy of the generated object, and copy the spec to the live object if they do not match.
-
-```go
-func (r *ReconcileMongoDB) CreateOrUpdate(
-	object runtime.Object, copy func(o1, o2 runtime.Object) bool) (reconcile.Result, error) {
-
-	meta, ok := object.(metav1.Object)
-	if !ok {
-		// This should never happen
-		return reconcile.Result{}, fmt.Errorf("invalid object type %T does not implement metav1.Object", object)
-	}
-
-	lookup := object.DeepCopyObject()
-	err := r.Get(context.TODO(), types.NamespacedName{Name: meta.GetName(), Namespace: meta.GetNamespace()}, lookup)
-	if err != nil && errors.IsNotFound(err) {
-		log.Printf("Creating %T %s/%s\n", object, meta.GetNamespace(), meta.GetName())
-		err = r.Create(context.TODO(), object)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-	} else if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// Update the found object and write the result back if there are any changes
-	if !copy(object, lookup) {
-		log.Printf("Updating %T %s/%s\n", object, meta.GetNamespace(), meta.GetName())
-		err = r.Update(context.TODO(), lookup)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-	}
-
-	return reconcile.Result{}, nil
-}
-```
-
+Copy the helper functions from [this sample code](https://github.com/pwittrock/kubebuilder-workshop/blob/master/pkg/controller/mongodb/helpers.go)
+to generate the objects for you.  These will create go objects that you can use to Create or Update the Kubernetes
+Resources.  Revisit these later to add more fields and customization.
 
 ### Controller Code
 
 - Update the RBAC rules to give perms for StatefulSets and Services
-- Generate a Service
-- Use the Helper CreateOrUpdate to update the Service
-- Generate a StatefuleSet
-- Use the Helper CreateOrUpdate to update the StatefulSet
-
-```go
-// +kubebuilder:rbac:groups=apps,resources=statefulesets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=,resources=services,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=databases.k8s.io,resources=mongodbs,verbs=get;list;watch;create;update;patch;delete
-func (r *ReconcileMongoDB) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// Fetch the MongoDB instance
-	instance := &databasesv1alpha1.MongoDB{}
-	err := r.Get(context.TODO(), request.NamespacedName, instance)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Object not found, return.  Created objects are automatically garbage collected.
-			// For additional cleanup logic use finalizers.
-			return reconcile.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
-	}
-
-	// Create or Update the Service
-	service := GetService(instance)
-	if err := controllerutil.SetControllerReference(instance, service, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-	if r, err := r.CreateOrUpdate(service, func(generated, fetched runtime.Object) bool {
-		generatedS := generated.(*corev1.Service)
-		fetchedS := fetched.(*corev1.Service)
-		if reflect.DeepEqual(generatedS.Spec.Selector, fetchedS.Spec.Selector) &&
-			reflect.DeepEqual(generatedS.Spec.Ports, fetchedS.Spec.Ports) {
-			// Don't update
-			return true
-		}
-		fetchedS.Spec.Selector = generatedS.Spec.Selector
-		fetchedS.Spec.Ports = generatedS.Spec.Ports
-		// Update
-		return false
-	}); err != nil {
-		log.Printf("failed to Create or Update Service %s/%s %v", service.Namespace, service.Name, err)
-		return r, err
-	}
-
-	// Create or Update the StatefulSet
-	stateful := GetStatefuleSet(instance)
-	if err := controllerutil.SetControllerReference(instance, stateful, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-	if r, err := r.CreateOrUpdate(stateful, func(generated, fetched runtime.Object) bool {
-		generatedS := generated.(*appsv1.StatefulSet)
-		fetchedS := fetched.(*appsv1.StatefulSet)
-		if reflect.DeepEqual(generatedS.Spec, fetchedS.Spec) {
-			// Don't update
-			return true
-		}
-		// TODO: Compare only fields we own
-		fetchedS.Spec = generatedS.Spec
-		// Update
-		return false
-	}); err != nil {
-		log.Printf("failed to Create or Update StatefulSet %s/%s %v", stateful.Namespace, stateful.Name, err)
-		return r, err
-	}
-
-	return reconcile.Result{}, nil
-}
-```
+  - `// +kubebuilder:rbac:groups=apps,resources=statefulesets,verbs=get;list;watch;create;update;patch;delete`
+  - `// +kubebuilder:rbac:groups=,resources=services,verbs=get;list;watch;create;update;patch;delete`
+  - `// +kubebuilder:rbac:groups=databases.k8s.io,resources=mongodbs,verbs=get;list;watch;create;update;patch;delete`
+- Generate a Service using the copied function
+- Change the boilerplate code to Create a Service if it doesn't exist, or Update it if one does
+  - **Warning**: For Services, be careful to only update the *Selector* and *Ports* so as not to overwrite ClusterIP.
+- Generate a StatefuleSet using the copied function
+- Change the boilerplate code to Create a StatefulSet if it doesn't exist, or Update it if one does
+  - **Note:** For StatefulSet you *can* update the full Spec if you want
 
 ## Test Your API
 
@@ -454,6 +205,7 @@ spec:
   - `kubectl get statefulsets`
   - `kubectl get services`
   - `kubectl get pods`
+    - **note**: the containers may be creating - wait for them to come up
   - `kubectl describe pods`
   - `kubectl logs mongo-instance-mongodb-statefulset-0 mongo`
 - delete the mongodb instance
