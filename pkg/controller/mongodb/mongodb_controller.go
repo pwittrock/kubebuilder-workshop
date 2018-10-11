@@ -153,7 +153,7 @@ func (r *ReconcileMongoDB) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 
 	// Create or Update the Service
-	service := GetService(instance)
+	service := GenerateService(instance)
 	if err := controllerutil.SetControllerReference(instance, service, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -175,7 +175,7 @@ func (r *ReconcileMongoDB) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 
 	// Create or Update the StatefulSet
-	stateful := GetStatefuleSet(instance)
+	stateful := GenerateStatefuleSet(instance)
 	if err := controllerutil.SetControllerReference(instance, stateful, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}

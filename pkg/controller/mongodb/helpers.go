@@ -25,7 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func GetStatefuleSet(instance *databasesv1alpha1.MongoDB) *appsv1.StatefulSet {
+// GenerateStatefuleSet returns a new appsv1.StatefulSet pointer generated for the MongoDB instance
+func GenerateStatefuleSet(instance *databasesv1alpha1.MongoDB) *appsv1.StatefulSet {
 	gracePeriodTerm := int64(10)
 
 	// TODO: Default and Validate these with Webhooks
@@ -99,8 +100,8 @@ func GetStatefuleSet(instance *databasesv1alpha1.MongoDB) *appsv1.StatefulSet {
 	return stateful
 }
 
-// GetService returns the desired generated Service for the MongoDB instance
-func GetService(instance *databasesv1alpha1.MongoDB) *corev1.Service {
+// GenerateService returns a new corev1.Service pointer generated for the MongoDB instance
+func GenerateService(instance *databasesv1alpha1.MongoDB) *corev1.Service {
 	// TODO: Default and Validate these with Webhooks
 	if instance.Labels == nil {
 		instance.Labels = map[string]string{}
