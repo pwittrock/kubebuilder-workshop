@@ -123,7 +123,7 @@ Resources.  Revisit these later to add more fields and customization.
 
 - Edit `pkg/controller/mongodb/mongodb_controller.go`
 
-Update the `Reconcile` function to create/update the StatefulSet and Service objects
+Update the `Reconcile` function to create/update the StatefulSet and Service objects instead of a Deployment object.
 
 - Generate a Service using the copied function
 - Change the boilerplate code to Create a Service if it doesn't exist, or Update it if one does
