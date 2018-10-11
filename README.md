@@ -176,7 +176,7 @@ spec:
   - `kubectl logs mongo-instance-mongodb-statefulset-0 mongo`
 - delete the mongodb instance
   - `kubectl delete -f config/samples/databases_v1alpha1_mongodb.yaml`
-- look for garbage collected resources
+- look for garbage collected resources (they should be gone)
   - `kubectl get monogodbs`
   - `kubectl get statefulsets`
   - `kubectl get services`
