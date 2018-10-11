@@ -19,83 +19,40 @@ spec:
   storage: 100Gi
 ```
 
-The Template to create a StatefuleSet and Service for running a MongoDB instance will be provided as Go functions.
+## Steps
 
-## Goals
-
-- Define a new Kubernetes API for running MongoDB instances
-  - Define fields for users to specify
-- Implement the API as a Controller
-  - Creates StatefulSet and Service for the MongoDB instance
-- Install the API into a Kubernetes Cluster using kubectl apply
-- Test the API by creating a MongoDB instance
+1. Define a MongoDB *Resource* (API)
+1. Implement the MongoDB Controller (API Implementation)
+1. Install the Resource and start the Controller
+1. Create a new MongoDB instance
 
 ## Prerequisites
 
-To get the most out of this Workshop, users should have:
-
-- A basic understanding of [Go Programming Language](https://golang.org/)
-- A basic understanding of [Kubernetes APIs](https://kubernetes.io/docs/user-journeys/users/application-developer/foundational/#section-2)
-
-## Setup a Kubernetes API dev environment
-
-### Install dev tools
-
-Install the dev tools that will be used to build and publish the MongoDB API.
-
-- Install Go 1.10+
-  - [go](https://golang.org/)
-
-- Install dep
-  - [dep](https://github.com/golang/dep)
-
-- Install kubectl
-  - [link](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl)
-
-- Install kustomize
-  - [kustomize](https://github.com/kubernetes-sigs/kustomize)
-
-- Install kubebuilder
-  - [kubebuilder](https://book.kubebuilder.io/getting_started/installation_and_setup.html)  
-
-### Create a dev cluster (Pick 1)
-
-Setup a dev cluster.
-
-- Google Kubernetes Engine (GKE) - Remote
-  - Install [GKE](https://cloud.google.com/kubernetes-engine/)
-  - Create the cluster `gcloud container clusters create "test-cluster"`
-  - Fetch the credentials for the cluster `gcloud container clusters get-credentials test-cluster`
-  - Test the setup `kubectl get nodes`
-
-- Minikube - Local VM
-  - Install [minikube](https://github.com/kubernetes/minikube)
-  - Start a minikube cluster `minikube start`
-  - Test the setup `kubectl get nodes`
-
-## Supplementary Resources on Kubebuilder and Kubernetes APIs
-
-Documentation on kubebuilder available here:
-
-- [http://book.kubebuilder.io](http://book.kubebuilder.io)
+See [kubebuilder-workshop-prereqs](https://github.com/pwittrock/kubebuilder-workshop-prereqs)
 
 ## Building a MongoDB API
 
+- Init a Go project
+- Create the Resource
+- Create the Controller
+  - Watch
+  - Reconcile
+
 ### Create a new Go project for your API
 
-Create a new project for the workshop
+Create a new go project
 
 - `mkdir -p $HOME/kubebuilder-workshop/src/github.com/my-org/my-project`
 - `export GOPATH=$HOME/kubebuilder-workshop`
 - `cd $HOME/kubebuilder-workshop/src/github.com/my-org/my-project`
 
-### Initialize the project structure go library deps
+Initialize the project
 
 - `kubebuilder init --domain k8s.io --license apache2 --owner "My Org"`
   - enter `y` to have it run dep for you
   - read on while you wait for `dep` to download the go library dependencies (takes ~3-5 minutes)
 
-### Define an empty MongoDB API
+### Scaffold the boilerplate for the MongoDB Resource and Controller
 
 Have kubebuilder create the boilerplate for a new Resource type and Controller
 
@@ -105,7 +62,7 @@ Have kubebuilder create the boilerplate for a new Resource type and Controller
   
 This will also build the project and run the tests to make sure the resource and controller are hooked up correctly.
   
-### Define the Schema for the MongoDB Resource
+### Define your Schema for the MongoDB Resource
 
 Define the Schema *Spec* for the MongoDB API
 
@@ -138,13 +95,16 @@ Example Spec for Kubernetes Pods:
 
 ## Implement the MongoDB Controller
 
-- Edit `pkg/controller/mongodb/mongodb_controller.go`
-- Update the Watch statements in `add`
-- Copy the Helper functions to generate StatefulSets and Services for MongoDB
-- Update the Resources that get created in `Reconcile`
-- Update the RBAC directives for StatefulSets and Services
+The MongoDB Controller will create a StatefulSet and Service that run MongoDB.
 
-### Update the Watch config
+- Add Watch Statements for StatefulSets and Services
+- Generate the desired StatefuleSet and Service
+- Generate the StatefulSet and Service and compare to what is live
+- Create or Update the StatefulSet and Service
+
+### Update Watch
+
+- Edit `pkg/controller/mongodb/mongodb_controller.go`
 
 Update the `add` function to Watch the Resources you will generate from the Controller (Service + StatefulSet)
 
@@ -155,16 +115,16 @@ Update the `add` function to Watch the Resources you will generate from the Cont
 
 ### Generate Service and StatefulSet objects from the MongoDB instance
 
-Copy the helper functions from [this sample code](https://github.com/pwittrock/kubebuilder-workshop/blob/master/pkg/controller/mongodb/helpers.go)
+**Copy the helper functions from [this sample code](https://github.com/pwittrock/kubebuilder-workshop/blob/master/pkg/controller/mongodb/helpers.go)**
 to generate the objects for you.  These will create go objects that you can use to Create or Update the Kubernetes
 Resources.  Revisit these later to add more fields and customization.
 
-### Controller Code
+### Update Reconcile
 
-- Update the RBAC rules to give perms for StatefulSets and Services
-  - `// +kubebuilder:rbac:groups=apps,resources=statefulesets,verbs=get;list;watch;create;update;patch;delete`
-  - `// +kubebuilder:rbac:groups=,resources=services,verbs=get;list;watch;create;update;patch;delete`
-  - `// +kubebuilder:rbac:groups=databases.k8s.io,resources=mongodbs,verbs=get;list;watch;create;update;patch;delete`
+- Edit `pkg/controller/mongodb/mongodb_controller.go`
+
+Update the `Reconcile` function to create/update the StatefulSet and Service objects
+
 - Generate a Service using the copied function
 - Change the boilerplate code to Create a Service if it doesn't exist, or Update it if one does
   - **Warning**: For Services, be careful to only update the *Selector* and *Ports* so as not to overwrite ClusterIP.
@@ -172,14 +132,20 @@ Resources.  Revisit these later to add more fields and customization.
 - Change the boilerplate code to Create a StatefulSet if it doesn't exist, or Update it if one does
   - **Note:** For StatefulSet you *can* update the full Spec if you want
 
+- Optional: update the RBAC rules to give perms for StatefulSets and Services (needed for if running as a container in a cluster)
+  - `// +kubebuilder:rbac:groups=apps,resources=statefulesets,verbs=get;list;watch;create;update;patch;delete`
+  - `// +kubebuilder:rbac:groups=,resources=services,verbs=get;list;watch;create;update;patch;delete`
+  - `// +kubebuilder:rbac:groups=databases.k8s.io,resources=mongodbs,verbs=get;list;watch;create;update;patch;delete`
+
 ## Test Your API
 
 ### Install the Resource into the Cluster
 
+- `make install` # install the CRDs
+
 ### Run the Controller locally
 
-- `make install` # install the CRDs
-- `make run` # run the controller
+- `make run` # run the controller as a local process
 
 ### Edit a sample MongoDB instance and create it
 
@@ -198,7 +164,7 @@ spec:
   - `kubectl apply -f config/samples/databases_v1alpha1_mongodb.yaml`
   - observe output from Controller
 
-### Look at the Resources
+### Look at the Resources in the cluster
 
 - look at created resources
   - `kubectl get monogodbs`
@@ -220,7 +186,6 @@ spec:
 
 - `kubectl run mongo-test -t -i --rm --image mongo bash`
 - `mongo <address of service>:27017`
-
 
 ## Experiment
 
