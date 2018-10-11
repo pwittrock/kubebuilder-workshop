@@ -91,7 +91,7 @@ Create a new project for the workshop
 
 - `kubebuilder init --domain k8s.io --license apache2 --owner "My Org"`
   - enter `y` to have it run dep for you
-  - read on while you wait for `dep` to complete (takes ~3-5 minutes)
+  - read on while you wait for `dep` to download the go library dependencies (takes ~3-5 minutes)
 
 ### Define an empty MongoDB API
 
@@ -101,20 +101,24 @@ Have kubebuilder create the boilerplate for a new Resource type and Controller
   - enter `y` to have it create boilerplate for the Resource
   - enter `y` to have it create boilerplate for the Controller
   
-This will also build the project and run the tests to make sure everything is hooked up correctly.
+This will also build the project and run the tests to make sure the resource and controller are hooked up correctly.
   
 ### Define the Schema for the MongoDB Resource
 
-Define the Schema *Spec* and *Status* for the MongoDB API
+Define the Schema *Spec* for the MongoDB API
 
 - edit `pkg/apis/databases/v1alpha/mongodb_types.go`
 
 Add optional fields for users to specify when creating MongoDB instances - for example:
 
-- `replicas` (*int32)
-- `storage` (*string)
+- `replicas` (int32)
+- `storage` (string)
 
-Example Spec
+To make them optional:
+
+- set `// +optional`
+- make them pointers with `*`
+- add the `omitempty` struct tag
 
 ```go
 type MongoDBSpec struct {
@@ -133,6 +137,7 @@ Example Spec for Kubernetes Pods:
 ## Implement the MongoDB Controller
 
 - quickly skim the [blogpost on running MongoDB as a StatefulSet on Kubernetes](https://kubernetes.io/blog/2017/01/running-mongodb-on-kubernetes-with-statefulsets/)
+  for background information - don't use the actual StatefulSet and Service, we will do something different.
 - edit `pkg/controller/mongodb/mongodb_controller.go`
 - remove the Deployment creation code
 - replace with StatefulSet and Service creation code
@@ -146,6 +151,8 @@ Example Spec for Kubernetes Pods:
 - Watch Services - and map to the Owning MongoDB instance (because we will generate them)
 - Watch StatefulSets - and map to the Owning MongoDB instance (because we will generate them)
 - (Delete Watch for Deployments because we don't generate them)
+
+Try to do it on your own first - but it should look something like this:
 
 ```go
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
@@ -468,6 +475,7 @@ spec:
 - Try deleting the statefulset - what happens when you look for it?
 - Try deleting the service - what happens when you look for it?
 - Try adding fields to control new things such as the Port
+- Try adding a *Spec*, what useful things can you put in there?
 
 ## Bonus Objectives
 

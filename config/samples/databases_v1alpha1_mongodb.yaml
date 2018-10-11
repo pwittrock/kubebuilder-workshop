@@ -1,0 +1,7 @@
+apiVersion: databases.k8s.io/v1alpha1
+kind: MongoDB
+metadata:
+  name: mongo-instance
+spec:
+  replicas: 1
+  storage: 100Gi
