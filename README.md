@@ -19,38 +19,20 @@ spec:
   storage: 100Gi
 ```
 
+## **Prerequisites**
+
+**Important:** Do these first
+
+See [kubebuilder-workshop-prereqs](https://github.com/pwittrock/kubebuilder-workshop-prereqs)
+
 ## Steps
 
 1. Define a MongoDB *Resource* (API)
 1. Implement the MongoDB Controller (API Implementation)
-1. Install the Resource and start the Controller
-1. Create a new MongoDB instance
-
-## Prerequisites
-
-See [kubebuilder-workshop-prereqs](https://github.com/pwittrock/kubebuilder-workshop-prereqs)
-
-## Building a MongoDB API
-
-- Init a Go project
-- Create the Resource
-- Create the Controller
-  - Watch
-  - Reconcile
-
-### Create a new Go project for your API
-
-Create a new go project
-
-- `mkdir -p $HOME/kubebuilder-workshop/src/github.com/my-org/my-project`
-- `export GOPATH=$HOME/kubebuilder-workshop`
-- `cd $HOME/kubebuilder-workshop/src/github.com/my-org/my-project`
-
-Initialize the project
-
-- `kubebuilder init --domain k8s.io --license apache2 --owner "My Org"`
-  - enter `y` to have it run dep for you
-  - read on while you wait for `dep` to download the go library dependencies (takes ~3-5 minutes)
+  - Configure Watch
+  - Implement Reconcile
+1. Install the Resource into a cluster and start the Controller locally
+1. Test the API by creating a MongoDB instance
 
 ### Scaffold the boilerplate for the MongoDB Resource and Controller
 
@@ -62,22 +44,15 @@ Have kubebuilder create the boilerplate for a new Resource type and Controller
   
 This will also build the project and run the tests to make sure the resource and controller are hooked up correctly.
   
-### Define your Schema for the MongoDB Resource
+### Define the Schema for the MongoDB Resource
 
 Define the Schema *Spec* for the MongoDB API
 
-- edit `pkg/apis/databases/v1alpha/mongodb_types.go`
+- edit `pkg/apis/databases/v1alpha/mongodb_types.go`, then follow the instructions below.
 
-Add optional fields for users to specify when creating MongoDB instances - for example:
+#### Sample Schema Spec
 
-- `replicas` (int32)
-- `storage` (string)
-
-To make them optional do the following:
-
-- set `// +optional`
-- make them pointers with `*`
-- add the `omitempty` struct tag
+**Note:** You can copy the following Schema
 
 ```go
 type MongoDBSpec struct {
@@ -89,7 +64,20 @@ type MongoDBSpec struct {
 }
 ```
 
-Example Spec for Kubernetes Pods:
+#### Sample Schema Spec Explanation
+
+Spec contains 2 optional fields:
+
+- `replicas` (int32)
+- `storage` (string)
+
+Fields are made optional by:
+
+- setting `// +optional`
+- making them pointers with `*`
+- adding the `omitempty` struct tag
+
+**Optional:** See example Spec for Kubernetes Pods for more examples
 
 - [PodSpec](https://github.com/kubernetes/api/blob/master/core/v1/types.go#L2715)
 
@@ -97,10 +85,12 @@ Example Spec for Kubernetes Pods:
 
 The MongoDB Controller will create a StatefulSet and Service that run MongoDB.
 
-- Add Watch Statements for StatefulSets and Services
-- Generate the desired StatefuleSet and Service
-- Generate the StatefulSet and Service and compare to what is live
-- Create or Update the StatefulSet and Service
+Steps:
+
+- Add Watch Statements for StatefulSets and Services (see below)
+- Generate the desired StatefuleSet and Service (see below)
+- Generate the StatefulSet and Service and compare to what is live (see below)
+- Create or Update the StatefulSet and Service (see below)
 
 ### Update Watch
 
@@ -118,6 +108,13 @@ Update the `add` function to Watch the Resources you will generate from the Cont
 **Copy the helper functions from [this sample code](https://github.com/pwittrock/kubebuilder-workshop/blob/master/pkg/controller/mongodb/helpers.go)**
 to generate the objects for you.  These will create go objects that you can use to Create or Update the Kubernetes
 Resources.  Revisit these later to add more fields and customization.
+
+Steps:
+
+- Generate the Service using the provided function (see below)
+- Create or Update the Service (see below)
+- Generate the StatefuleSet using the provided function (see below)
+- Create of Update the StatefulSet (see below)
 
 ### Update Reconcile
 
