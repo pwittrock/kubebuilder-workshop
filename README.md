@@ -5,7 +5,9 @@ By the end of the workshop, participants will have built a Kubernetes native API
 
 Once the API is installed into a Kubernetes cluster, users should be able to create new MongoDB instance similar
 to the one in [this blog post](https://kubernetes.io/blog/2017/01/running-mongodb-on-kubernetes-with-statefulsets/) by
-specifying a MongoDB config file and running `kubectl apply -f` on the file.
+specifying a MongoDB file and running `kubectl apply -f` on it.
+
+The MongoDB API will manage (Create / Update) a Kubernetes **StatefulSet** and **Service** that runs a MongoDB instance.
 
 Example file:
 
@@ -21,20 +23,20 @@ spec:
 
 ## **Prerequisites**
 
-**Important:** Do these first
+**Important:** Do these steps before moving on
 
-See [kubebuilder-workshop-prereqs](https://github.com/pwittrock/kubebuilder-workshop-prereqs)
+[kubebuilder-workshop-prereqs](https://github.com/pwittrock/kubebuilder-workshop-prereqs)
 
-## Steps
+## Overview
 
-1. Define a MongoDB *Resource* (API Definition)
-1. Implement the MongoDB Controller (API Implementation)
-  - Update Watch for the Resources the Controller creates / updates
-  - Update Reconcile to create / update the MongoDB StatefulSet and Service
-1. Install the Resource into a cluster and start the Controller locally
-1. Test the API by creating a MongoDB instance
+Following is an overview of the steps required to implement the MongoDB API.
 
-### Scaffold the boilerplate for the MongoDB Resource and Controller
+1. Create the scaffolded boilerplate for the MongoDB Resource and Controller
+1. Update the MongoDB Resource scaffold with a Schema
+1. Update the MongoDB Controller `add` stub to Watch StatefulSets, Services, and MongoDBs
+1. Update the MongoDB controller `Reconcile` stub to create / update StatefulSets and Services
+
+## Scaffold the boilerplate for the MongoDB Resource and Controller
 
 Scaffold the boilerplate for a new MongoDB Resource type and Controller
 
@@ -45,9 +47,14 @@ correctly.
   - enter `y` to have it create boilerplate for the Resource
   - enter `y` to have it create boilerplate for the Controller
   
-### Update the scaffolded the Schema with the MongoDB Resource API Definition
+## Update the MongoDB Resource scaffold with a Schema
 
 Define the MongoDB API Schema *Spec*for in `pkg/apis/databases/v1alpha/mongodb_types.go`.
+
+Spec contains 2 optional fields:
+
+- `replicas` (int32)
+- `storage` (string)
 
 **Note:** Copy the following Spec, optionally revisit later to add more fields.
 
@@ -61,39 +68,35 @@ type MongoDBSpec struct {
 }
 ```
 
-Spec contains 2 optional fields:
-
-- `replicas` (int32)
-- `storage` (string)
-
 **Note:** Fields have been made optional by:
 
 - setting `// +optional`
 - making them pointers with `*`
 - adding the `omitempty` struct tag
 
-Further reading: [PodSpec Example](https://github.com/kubernetes/api/blob/master/core/v1/types.go#L2715)
+Documentation:
 
-### Implement the MongoDB Controller
+- [Resource Definition](https://book.kubebuilder.io/basics/simple_resource.html)
+- [PodSpec Example](https://github.com/kubernetes/api/blob/master/core/v1/types.go#L2715)
+
+## Implement the MongoDB Controller
 
 The MongoDB Controller should manage a StatefulSet and Service for running MongoDB.
-
-Steps:
-
-- Add Watch Statements for StatefulSets and Services (instructions below)
-- Generate the desired StatefuleSet and Service (instructions below)
-- Generate the StatefulSet and Service and compare to what is live (instructions below)
-- Create or Update the StatefulSet and Service (instructions below)
 
 ### Update `add` with Watches
 
 Update the `add` function to Watch the Resources you will be creating / updating in
 `pkg/controller/mongodb/mongodb_controller.go`.
 
-- (No-Op) Watch MongoDB (EnqueueRequestForObject) - this was scaffolded for you
-- Add Watch Services - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you need to add this
-- Add Watch StatefulSets - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you need to add this
-- Delete Watch Deployments - you aren't managing Deployments
+- *No-Op* - Watch MongoDB (EnqueueRequestForObject) - this was scaffolded for you
+- *Add* - Watch Services - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you need to add this
+- *Add* - Watch StatefulSets - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you need to add this
+- *Delete* - Watch Deployments - you aren't managing Deployments
+
+Documentation:
+
+- [Simple Watch](https://book.kubebuilder.io/basics/simple_controller.html#adding-a-controller-to-the-manager)
+- [Advanced Watch](https://book.kubebuilder.io/beyond_basics/controller_watches.html)
 
 ### Update `Reconcile` with object creation
 
@@ -107,13 +110,19 @@ Update the `Reconcile` function to Create / Update the StatefulSet and Service o
 - Use the struct to either Create or Update a StatefulSet to run MongoDB
   - **Note:** For StatefulSet you *can* update the full Spec if you want
 
+Documentation:
+
+- [Reconcile](https://book.kubebuilder.io/basics/simple_controller.html#implementing-controller-reconcile)
+
 - **Optional:** for when running in cluster - update the RBAC rules to give perms for StatefulSets and
   Services (needed for if running as a container in a cluster)
   - `// +kubebuilder:rbac:groups=apps,resources=statefulesets,verbs=get;list;watch;create;update;patch;delete`
   - `// +kubebuilder:rbac:groups=,resources=services,verbs=get;list;watch;create;update;patch;delete`
   - `// +kubebuilder:rbac:groups=databases.k8s.io,resources=mongodbs,verbs=get;list;watch;create;update;patch;delete`
 
-## Test Your API
+## Try your API in a Kubernetes Cluster
+
+Now that you have finished implementing the MongoDB API, lets try it out in a Kubernetes cluster.
 
 ### Install the Resource into the Cluster
 
@@ -123,7 +132,7 @@ Update the `Reconcile` function to Create / Update the StatefulSet and Service o
 
 - `make run` # run the controller as a local process
 
-### Edit a sample MongoDB instance and create it
+### Edit the sample MongoDB file
 
 ```yaml
 apiVersion: databases.k8s.io/v1alpha1
@@ -140,7 +149,7 @@ spec:
   - `kubectl apply -f config/samples/databases_v1alpha1_mongodb.yaml`
   - observe output from Controller
 
-### Look at the Resources in the cluster
+### Check out the Resources in the cluster
 
 - look at created resources
   - `kubectl get monogodbs`
@@ -158,19 +167,21 @@ spec:
   - `kubectl get services`
   - `kubectl get pods`
 
-### Connect to the MongoDB instance from a Pod
+### Connect to the running MongoDB instance from within the cluster using a Pod
 
 - `kubectl run mongo-test -t -i --rm --image mongo bash`
 - `mongo <address of service>:27017`
 
-## Experiment
+## Experiment some more
 
-- Try deleting the statefulset - what happens when you look for it?
-- Try deleting the service - what happens when you look for it?
+- Try deleting the StatefulSet - what happens when you look for it?
+- Try deleting the Service - what happens when you look for it?
 - Try adding fields to control new things such as the Port
 - Try adding a *Spec*, what useful things can you put in there?
 
 ## Bonus Objectives
+
+If you finish early, or want to continue working on your API after the workshop, try these exercises.
 
 ### Build your API into a container and publish it
 
@@ -184,13 +195,13 @@ spec:
 
 - [Validation tags docs](https://book.kubebuilder.io/basics/simple_resource.html)
 
-### Publish Events from the Controller code
+### Publish Events from the Controller code that can been seen with `kubectl describe`
 
 - [Event docs](https://book.kubebuilder.io/beyond_basics/creating_events.html)
 
-### Add Operational Logic to the Reconcile
+### Add more Operational Logic to the Reconcile
 
-Add logic to the Reconcile to handle lifecycle events.
+Add logic to the Reconcile to handle MongoDB lifecycle events such as upgrades / downgrades.
 
 ### Define and add a list of Conditions to the Status, then set them from the Controller
 
