@@ -89,9 +89,14 @@ Update the `add` function to Watch the Resources you will be creating / updating
 `pkg/controller/mongodb/mongodb_controller.go`.
 
 - *No-Op* - Watch MongoDB (EnqueueRequestForObject) - this was scaffolded for you
-- *Add* - Watch Services - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you need to add this
-- *Add* - Watch StatefulSets - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you need to add this
-- *Delete* - Watch Deployments - you aren't managing Deployments
+- *Remove* - Watch Deployments - you aren't managing Deployments so remove this
+- *Add* - Watch Services - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you are managing Services so add add this
+- *Add* - Watch StatefulSets - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you are managing StatefulSets so add this
+
+**Import Package Hints:**
+
+- for the package with the StatefulSet struct import - `appsv1 "k8s.io/api/apps/v1"`
+- for the package with the Services struct import - `corev1 "k8s.io/api/core/v1"`
 
 Documentation:
 
@@ -103,12 +108,17 @@ Documentation:
 Update the `Reconcile` function to Create / Update the StatefulSet and Service objects to run MongoDB in
 `pkg/controller/mongodb/mongodb_controller.go`.
 
-- Use the provided `GenerateService` function to get a Service struct instance
-- Use the struct to either Create or Update a Service to run MongoDB
-  - **Warning**: For Services, be careful to only update the *Selector* and *Ports* so as not to overwrite ClusterIP.
-- Use the provided `GenerateStatefuleSet` function to get a StatefulSet struct instance
-- Use the struct to either Create or Update a StatefulSet to run MongoDB
-  - **Note:** For StatefulSet you *can* update the full Spec if you want
+- Create a Service for running MongoDB, or Update the existing one
+- Create a StatefulSet for running MongoDB, or Update the existing one
+
+**Object Generation Hints:**
+
+- Use the functions under `pkg/util` to provide StatefulSet and Service struct instances
+- Use the functions under `pkg/util` to copy fields from generated StatefulSet and Sercice struct instances
+  to the live copies that have been read (e.g. so you don't clobber the Service.Spec.ClusterIP field).
+
+**Note:** This will cause the tests to start failing because you changed the Reconcile behavior.  Don't worry
+about this for now.
 
 Documentation:
 
@@ -134,6 +144,8 @@ Now that you have finished implementing the MongoDB API, lets try it out in a Ku
 
 ### Edit the sample MongoDB file
 
+Edit `config/samples/databases_v1alpha1_mongodb.yaml`
+
 ```yaml
 apiVersion: databases.k8s.io/v1alpha1
 kind: MongoDB
@@ -144,7 +156,6 @@ spec:
   storage: 100Gi
 ```
 
-- edit `config/samples/databases_v1alpha1_mongodb.yaml`
 - create the mongodb instance
   - `kubectl apply -f config/samples/databases_v1alpha1_mongodb.yaml`
   - observe output from Controller
@@ -194,6 +205,10 @@ If you finish early, or want to continue working on your API after the workshop,
 ### Add Simple Schema Validation
 
 - [Validation tags docs](https://book.kubebuilder.io/basics/simple_resource.html)
+
+### Update the tests to make them pass
+
+Update the tests to check the Controller logic you added.
 
 ### Publish Events from the Controller code that can been seen with `kubectl describe`
 
