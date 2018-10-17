@@ -1,3 +1,5 @@
+This is not an officially supported Google product
+
 # Kubebuilder Workshop
 
 The Kubebuilder Workshop is aimed at providing hands-on experience building Kubernetes APIs using kubebuilder.
