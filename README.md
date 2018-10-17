@@ -115,6 +115,8 @@ Update the `Reconcile` function to Create / Update the StatefulSet and Service o
 
 **Object Generation Hints:**
 
+- Make sure you have the cloned or copied the provided
+  [pkg/util](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/pkg/util/util.go) functions
 - Use the functions under `pkg/util` to provide StatefulSet and Service struct instances for a MongoDB instance
   - `GenerateStatefuleSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet`
   - `GenerateService(mongo metav1.Object) *corev1.Service`

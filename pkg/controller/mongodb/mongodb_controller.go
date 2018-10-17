@@ -18,10 +18,11 @@ package mongodb
 
 import (
 	"context"
-	"log"
 	"fmt"
+	"log"
 
 	databasesv1alpha1 "github.com/pwittrock/kubebuilder-workshop/pkg/apis/databases/v1alpha1"
+	"github.com/pwittrock/kubebuilder-workshop/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -35,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"github.com/pwittrock/kubebuilder-workshop/pkg/util"
 )
 
 // Add creates a new MongoDB Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
