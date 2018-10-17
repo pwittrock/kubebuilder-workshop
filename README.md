@@ -95,10 +95,10 @@ Update the `add` function to Watch the Resources you will be creating / updating
 - *Add* - Watch Services - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you are managing Services so add add this
 - *Add* - Watch StatefulSets - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you are managing StatefulSets so add this
 
-**Import Package Hints:**
+**Package Hints:**
 
-- for the package with the StatefulSet struct import - `appsv1 "k8s.io/api/apps/v1"`
-- for the package with the Services struct import - `corev1 "k8s.io/api/core/v1"`
+- for the StatefulSet struct use package - `appsv1 "k8s.io/api/apps/v1"`
+- for the Services struct use package - `corev1 "k8s.io/api/core/v1"`
 
 Documentation:
 
@@ -115,9 +115,13 @@ Update the `Reconcile` function to Create / Update the StatefulSet and Service o
 
 **Object Generation Hints:**
 
-- Use the functions under `pkg/util` to provide StatefulSet and Service struct instances
+- Use the functions under `pkg/util` to provide StatefulSet and Service struct instances for a MongoDB instance
+  - `GenerateStatefuleSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet`
+  - `GenerateService(mongo metav1.Object) *corev1.Service`
 - Use the functions under `pkg/util` to copy fields from generated StatefulSet and Service struct instances
   to the live copies that have been read (e.g. so you don't clobber the Service.Spec.ClusterIP field).
+  - `CopyStatefulSetFields(from, to *appsv1.StatefulSet) bool`
+  - `CopyServiceFields(from, to *corev1.Service) bool`
 
 **Note:** This will cause the tests to start failing because you changed the Reconcile behavior.  Don't worry
 about this for now.
@@ -179,11 +183,13 @@ spec:
   - `kubectl get statefulsets`
   - `kubectl get services`
   - `kubectl get pods`
+- recreate the MongoDB instance
+  - `kubectl apply -f config/samples/databases_v1alpha1_mongodb.yaml`
 
 ### Connect to the running MongoDB instance from within the cluster using a Pod
 
 - `kubectl run mongo-test -t -i --rm --image mongo bash`
-- `mongo <address of service>:27017`
+- `mongo <cluster ip address of mongodb service>:27017`
 
 ## Experiment some more
 

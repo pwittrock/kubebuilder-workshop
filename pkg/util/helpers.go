@@ -14,42 +14,47 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mongodb
+package util
 
 import (
-	databasesv1alpha1 "github.com/pwittrock/kubebuilder-workshop/pkg/apis/databases/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"reflect"
 )
 
 // GenerateStatefuleSet returns a new appsv1.StatefulSet pointer generated for the MongoDB instance
-func GenerateStatefuleSet(instance *databasesv1alpha1.MongoDB) *appsv1.StatefulSet {
+// object: MongoDB instance
+// replicas: the number of replicas for the MongoDB instance
+// storage: the size of the storage for the MongoDB instance (e.g. 100Gi)
+func GenerateStatefuleSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet {
 	gracePeriodTerm := int64(10)
 
 	// TODO: Default and Validate these with Webhooks
-	if instance.Spec.Replicas == nil {
+	if replicas == nil {
 		r := int32(1)
-		instance.Spec.Replicas = &r
+		replicas = &r
 	}
-	if instance.Spec.Storage == nil {
+	if storage == nil {
 		s := "100Gi"
-		instance.Spec.Storage = &s
+		storage = &s
 	}
-	if instance.Labels == nil {
-		instance.Labels = map[string]string{}
+
+	copyLabels := mongo.GetLabels()
+	if copyLabels == nil {
+		copyLabels = map[string]string{}
 	}
 
 	labels := map[string]string{}
-	for k, v := range instance.Labels {
+	for k, v := range copyLabels {
 		labels[k] = v
 	}
-	labels["mongodb-statefuleset"] = instance.Name
+	labels["mongodb-statefuleset"] = mongo.GetName()
 
 	rl := corev1.ResourceList{}
-	rl["storage"] = resource.MustParse(*instance.Spec.Storage)
+	rl["storage"] = resource.MustParse(*storage)
 
 	pvc := corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{Name: "mongo-persistent-storage"},
@@ -63,18 +68,18 @@ func GenerateStatefuleSet(instance *databasesv1alpha1.MongoDB) *appsv1.StatefulS
 
 	stateful := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name + "-mongodb-statefulset",
-			Namespace: instance.Namespace,
+			Name:      mongo.GetName() + "-mongodb-statefulset",
+			Namespace: mongo.GetNamespace(),
 			Labels:    labels,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"statefulset": instance.Name + "-mongodb-statefulset"},
+				MatchLabels: map[string]string{"statefulset": mongo.GetName() + "-mongodb-statefulset"},
 			},
 			ServiceName: "mongo",
-			Replicas:    instance.Spec.Replicas,
+			Replicas:    replicas,
 			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"statefulset": instance.Name + "-mongodb-statefulset"}},
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"statefulset": mongo.GetName() + "-mongodb-statefulset"}},
 
 				Spec: corev1.PodSpec{
 					TerminationGracePeriodSeconds: &gracePeriodTerm,
@@ -100,30 +105,90 @@ func GenerateStatefuleSet(instance *databasesv1alpha1.MongoDB) *appsv1.StatefulS
 	return stateful
 }
 
+// CopyStatefulSetFields copies the owned fields from one StatefulSet to another
+// Returns true if the fields copied from don't match to.
+func CopyStatefulSetFields(from, to *appsv1.StatefulSet) bool {
+	requireUpdate := false
+	for k, v := range to.Labels {
+		if from.Labels[k] != v {
+			requireUpdate = true
+		}
+	}
+	to.Labels = from.Labels
+
+	for k, v := range to.Annotations {
+		if from.Annotations[k] != v {
+			requireUpdate = true
+		}
+	}
+	to.Annotations = from.Annotations
+
+	if !reflect.DeepEqual(to.Spec, from.Spec) {
+		requireUpdate = true
+	}
+	to.Spec = from.Spec
+
+	return requireUpdate
+}
+
 // GenerateService returns a new corev1.Service pointer generated for the MongoDB instance
-func GenerateService(instance *databasesv1alpha1.MongoDB) *corev1.Service {
+// mongo: MongoDB instance
+func GenerateService(mongo metav1.Object) *corev1.Service {
 	// TODO: Default and Validate these with Webhooks
-	if instance.Labels == nil {
-		instance.Labels = map[string]string{}
+	copyLabels := mongo.GetLabels()
+	if copyLabels == nil {
+		copyLabels = map[string]string{}
 	}
 	labels := map[string]string{}
-	for k, v := range instance.Labels {
+	for k, v := range copyLabels {
 		labels[k] = v
 	}
-	labels["mongodb-service"] = instance.Name
+	labels["mongodb-service"] = mongo.GetName()
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name + "-mongodb-service",
-			Namespace: instance.Namespace,
+			Name:      mongo.GetName() + "-mongodb-service",
+			Namespace: mongo.GetNamespace(),
 			Labels:    labels,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{Port: 27017, TargetPort: intstr.IntOrString{IntVal: 27017, Type: intstr.Int}},
 			},
-			Selector: map[string]string{"statefulset": instance.Name + "-mongodb-statefulset"},
+			Selector: map[string]string{"statefulset": mongo.GetName() + "-mongodb-statefulset"},
 		},
 	}
 	return service
+}
+
+// CopyServiceFields copies the owned fields from one Service to another
+func CopyServiceFields(from, to *corev1.Service) bool {
+	requireUpdate := false
+	for k, v := range to.Labels {
+		if from.Labels[k] != v {
+			requireUpdate = true
+		}
+	}
+	to.Labels = from.Labels
+
+	for k, v := range to.Annotations {
+		if from.Annotations[k] != v {
+			requireUpdate = true
+		}
+	}
+	to.Annotations = from.Annotations
+
+	// Don't copy the entire Spec, because we can't overwrite the clusterIp field
+
+	if !reflect.DeepEqual(to.Spec.Selector, from.Spec.Selector) {
+		requireUpdate = true
+	}
+	to.Spec.Selector = from.Spec.Selector
+
+	if !reflect.DeepEqual(to.Spec.Ports, from.Spec.Ports) {
+		requireUpdate = true
+	}
+	to.Spec.Ports = from.Spec.Ports
+
+	return requireUpdate
 }

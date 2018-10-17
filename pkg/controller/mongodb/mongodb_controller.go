@@ -19,9 +19,8 @@ package mongodb
 import (
 	"context"
 	"log"
-	"reflect"
-
 	"fmt"
+
 	databasesv1alpha1 "github.com/pwittrock/kubebuilder-workshop/pkg/apis/databases/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,16 +35,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"github.com/pwittrock/kubebuilder-workshop/pkg/util"
 )
-
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
 
 // Add creates a new MongoDB Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-// USER ACTION REQUIRED: update cmd/manager/main.go to call this databases.Add(mgr) to install this Controller
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
 }
@@ -153,20 +147,17 @@ func (r *ReconcileMongoDB) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 
 	// Create or Update the Service
-	service := GenerateService(instance)
+	service := util.GenerateService(instance)
 	if err := controllerutil.SetControllerReference(instance, service, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 	if r, err := r.CreateOrUpdate(service, func(generated, fetched runtime.Object) bool {
 		generatedS := generated.(*corev1.Service)
 		fetchedS := fetched.(*corev1.Service)
-		if reflect.DeepEqual(generatedS.Spec.Selector, fetchedS.Spec.Selector) &&
-			reflect.DeepEqual(generatedS.Spec.Ports, fetchedS.Spec.Ports) {
+		if !util.CopyServiceFields(generatedS, fetchedS) {
 			// Don't update
 			return true
 		}
-		fetchedS.Spec.Selector = generatedS.Spec.Selector
-		fetchedS.Spec.Ports = generatedS.Spec.Ports
 		// Update
 		return false
 	}); err != nil {
@@ -175,19 +166,17 @@ func (r *ReconcileMongoDB) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 
 	// Create or Update the StatefulSet
-	stateful := GenerateStatefuleSet(instance)
+	stateful := util.GenerateStatefuleSet(instance, instance.Spec.Replicas, instance.Spec.Storage)
 	if err := controllerutil.SetControllerReference(instance, stateful, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 	if r, err := r.CreateOrUpdate(stateful, func(generated, fetched runtime.Object) bool {
 		generatedS := generated.(*appsv1.StatefulSet)
 		fetchedS := fetched.(*appsv1.StatefulSet)
-		if reflect.DeepEqual(generatedS.Spec, fetchedS.Spec) {
+		if util.CopyStatefulSetFields(generatedS, fetchedS) {
 			// Don't update
 			return true
 		}
-		// TODO: Compare only fields we own
-		fetchedS.Spec = generatedS.Spec
 		// Update
 		return false
 	}); err != nil {
