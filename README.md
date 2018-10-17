@@ -23,6 +23,8 @@ spec:
   storage: 100Gi
 ```
 
+**Note**: This repo contains a full solution for the workshop exercise if you get stuck
+
 ## **Prerequisites**
 
 **Important:** Do these steps before moving on
