@@ -29,6 +29,9 @@ The MongoDB Resource will manage (Create / Update) a Kubernetes **StatefulSet** 
 
 **Important:** Complete these steps first.
 
+**Note**: If you have been provided a pre-provisioned GCP project development account see the
+[preprovisioned](https://github.com/pwittrock/kubebuilder-workshop-prereqs/preprovisioned/README.md) instructions.
+
 [kubebuilder-workshop-prereqs](https://github.com/pwittrock/kubebuilder-workshop-prereqs)
 
 ## Overview
