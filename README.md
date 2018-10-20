@@ -59,7 +59,7 @@ correctly.
   
 ### Step 1: Add a Schema to the MongoDB Resource stub
 
-Change the MongoDB API Schema *Spec* in `pkg/apis/databases/v1alpha1/mongodb_types.go`.
+Change the MongoDB API Schema (e.g. *MongoDBSpec*) in `pkg/apis/databases/v1alpha1/mongodb_types.go`.
 
 Start with 2 optional fields:
 
@@ -94,6 +94,9 @@ Documentation (Read later):
 
 Update the `add` function in `pkg/controller/mongodb/mongodb_controller.go` to Watch the Resources the
 Controller will be managing.
+
+The generated `add` stub watches Deployments *owned* by the Controller.  Instead we want to watch StatefulSets
+and Services *owned* by the Controller.
 
 - *No-Op* - Watch MongoDB (EnqueueRequestForObject) - this was scaffolded for you
 - *Remove* - Watch Deployments - you aren't managing Deployments so remove this
