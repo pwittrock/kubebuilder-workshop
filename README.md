@@ -2,14 +2,12 @@ This is not an officially supported Google product
 
 # Kubebuilder Workshop
 
-The Kubebuilder Workshop is aimed at providing hands-on experience building Kubernetes APIs using kubebuilder.
-By the end of the workshop, participants will have built a Kubernetes native API for running MongoDB instances.
+The Kubebuilder Workshop is aimed at providing hands-on experience creating Kubernetes APIs using kubebuilder.
+By the end of the workshop, attendees will have created a Kubernetes native API for running MongoDB instances.
 
-Once the API is installed into a Kubernetes cluster, users should be able to create new MongoDB instance similar
-to the one in [this blog post](https://kubernetes.io/blog/2017/01/running-mongodb-on-kubernetes-with-statefulsets/) by
-specifying a MongoDB file and running `kubectl apply -f` on it.
-
-The MongoDB API will manage (Create / Update) a Kubernetes **StatefulSet** and **Service** that runs a MongoDB instance.
+Once the API is installed into a Kubernetes cluster, cluster users should be able to create new MongoDB instances
+similar to the one in [this blog post](https://kubernetes.io/blog/2017/01/running-mongodb-on-kubernetes-with-statefulsets/)
+by specifying the MongoDB Resource in a file and running `kubectl apply -f`.
 
 Example file:
 
@@ -23,11 +21,13 @@ spec:
   storage: 100Gi
 ```
 
-**Note**: This repo contains a full solution for the workshop exercise if you get stuck
+The MongoDB Resource will manage (Create / Update) a Kubernetes **StatefulSet** and **Service**.
+
+**Note**: This repo contains a full solution to the workshop exercise if you get stuck.
 
 ## **Prerequisites**
 
-**Important:** Do these steps before moving on
+**Important:** Complete these steps first.
 
 [kubebuilder-workshop-prereqs](https://github.com/pwittrock/kubebuilder-workshop-prereqs)
 
@@ -35,32 +35,31 @@ spec:
 
 Following is an overview of the steps required to implement the MongoDB API.
 
-1. Create the scaffolded boilerplate for the MongoDB Resource and Controller
-1. Update the MongoDB Resource scaffold with a Schema
-1. Update the MongoDB Controller `add` stub to Watch StatefulSets, Services, and MongoDBs
-1. Update the MongoDB controller `Reconcile` stub to create / update StatefulSets and Services
+1. Create the MongoDB Resource and Controller stubs.
+1. Change the MongoDB Resource `MongoDBSpec` struct stub with a Schema.
+1. Change the MongoDB Controller `add` function stub to Watch StatefulSets, Services, and MongoDBs.
+1. Change the MongoDB controller `Reconcile` function stub to create / update StatefulSets and Services that
+   run a MongoDB instance.
 
-## Scaffold the boilerplate for the MongoDB Resource and Controller
-
-Scaffold the boilerplate for a new MongoDB Resource type and Controller
+## Create the MongoDB Resource and Controller Stubs
 
 **Note:** This will also build the project and run the tests to make sure the resource and controller are hooked up
 correctly.
 
 - `kubebuilder create api --group databases --version v1alpha1 --kind MongoDB`
-  - enter `y` to have it create boilerplate for the Resource
-  - enter `y` to have it create boilerplate for the Controller
+  - enter `y` to have it create the stub for the Resource
+  - enter `y` to have it create the stub for the Controller
   
-## Update the MongoDB Resource scaffold with a Schema
+### Step 1: Add a Schema to the MongoDB Resource stub
 
-Define the MongoDB API Schema *Spec*for in `pkg/apis/databases/v1alpha/mongodb_types.go`.
+Change the MongoDB API Schema *Spec* in `pkg/apis/databases/v1alpha1/mongodb_types.go`.
 
-Spec contains 2 optional fields:
+Start with 2 optional fields:
 
 - `replicas` (int32)
 - `storage` (string)
 
-**Note:** Copy the following Spec, optionally revisit later to add more fields.
+**Note:** Simply copy the following Spec, and optionally revisit later to add more fields.
 
 ```go
 type MongoDBSpec struct {
@@ -78,19 +77,16 @@ type MongoDBSpec struct {
 - making them pointers with `*`
 - adding the `omitempty` struct tag
 
-Documentation:
+Documentation (Read later):
 
 - [Resource Definition](https://book.kubebuilder.io/basics/simple_resource.html)
 - [PodSpec Example](https://github.com/kubernetes/api/blob/master/core/v1/types.go#L2715)
 
-## Implement the MongoDB Controller
 
-The MongoDB Controller should manage a StatefulSet and Service for running MongoDB.
+### Step 2: Change Watches for the MongoDB Controller `add` function stub
 
-### Update `add` Watches
-
-Update the `add` function to Watch the Resources you will be creating / updating in
-`pkg/controller/mongodb/mongodb_controller.go`.
+Update the `add` function in `pkg/controller/mongodb/mongodb_controller.go` to Watch the Resources the
+Controller will be managing.
 
 - *No-Op* - Watch MongoDB (EnqueueRequestForObject) - this was scaffolded for you
 - *Remove* - Watch Deployments - you aren't managing Deployments so remove this
@@ -99,33 +95,39 @@ Update the `add` function to Watch the Resources you will be creating / updating
 
 **Package Hints:**
 
-- for the StatefulSet struct use package - `appsv1 "k8s.io/api/apps/v1"`
-- for the Services struct use package - `corev1 "k8s.io/api/core/v1"`
+- the `StatefulSet` struct is in package `appsv1 "k8s.io/api/apps/v1"`
+- the `Service` struct is in package `corev1 "k8s.io/api/core/v1"`
 
-Documentation:
+See the following for documentation on Watches:
 
 - [Simple Watch](https://book.kubebuilder.io/basics/simple_controller.html#adding-a-controller-to-the-manager)
 - [Advanced Watch](https://book.kubebuilder.io/beyond_basics/controller_watches.html)
 
-### Update `Reconcile` with object creation
+### Step 3: Change logic in the MongoDB Controller `Reconcile` function stub
 
 Update the `Reconcile` function to Create / Update the StatefulSet and Service objects to run MongoDB in
 `pkg/controller/mongodb/mongodb_controller.go`.
 
-- Create a Service for running MongoDB, or Update the existing one
-- Create a StatefulSet for running MongoDB, or Update the existing one
+The generated Reconcile stub manages (creates or updates) a static Deployment.  Instead of managing a Deployment,
+we want to manage a StatefulSet and a Service using `util` package to create the structs.
+
+Steps:
+
+- Change the code that Creates / Updates a Deployment to Create / Update a Service using the `GenerateService` and `CopyServiceFields` functions
+- Copy the code to also Create / Update a StatefulSet using the `GenerateStatefulSet` and `CopyStatefulSetFields` functions
+- Run `make` (expect tests to fail because they have not been updated)
 
 **Object Generation Hints:**
 
 - Make sure you have the cloned or copied the provided
-  [pkg/util](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/pkg/util/util.go) functions
+  "[github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/pkg/util/util.go)" functions
 - Use the functions under `pkg/util` to provide StatefulSet and Service struct instances for a MongoDB instance
-  - `GenerateStatefuleSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet`
+  - `GenerateStatefulSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet`
   - `GenerateService(mongo metav1.Object) *corev1.Service`
-- Use the functions under `pkg/util` to copy fields from generated StatefulSet and Service struct instances
-  to the live copies that have been read (e.g. so you don't clobber the Service.Spec.ClusterIP field).
-  - `CopyStatefulSetFields(from, to *appsv1.StatefulSet) bool`
-  - `CopyServiceFields(from, to *corev1.Service) bool`
+- Use the functions under `github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util` to copy fields from generated StatefulSet and Service struct instances
+  to the read instances (e.g. so you don't clobber the Service.Spec.ClusterIP field).
+  - `CopyStatefulSetFields(from, to *appsv1.StatefulSet) bool` // Returns true if update required
+  - `CopyServiceFields(from, to *corev1.Service) bool` // Returns true if update requireds
 
 **Note:** This will cause the tests to start failing because you changed the Reconcile behavior.  Don't worry
 about this for now.
@@ -134,8 +136,10 @@ Documentation:
 
 - [Reconcile](https://book.kubebuilder.io/basics/simple_controller.html#implementing-controller-reconcile)
 
-- **Optional:** for when running in cluster - update the RBAC rules to give perms for StatefulSets and
-  Services (needed for if running as a container in a cluster)
+#### RBAC
+
+- **Optional:** for running in cluster only - update the RBAC rules defined as comments on the `Reconcile` function
+  to give read / write access for StatefulSets and Services (required when running as a container in a cluster).
   - `// +kubebuilder:rbac:groups=apps,resources=statefulesets,verbs=get;list;watch;create;update;patch;delete`
   - `// +kubebuilder:rbac:groups=,resources=services,verbs=get;list;watch;create;update;patch;delete`
   - `// +kubebuilder:rbac:groups=databases.k8s.io,resources=mongodbs,verbs=get;list;watch;create;update;patch;delete`
@@ -208,6 +212,7 @@ If you finish early, or want to continue working on your API after the workshop,
 ### Build your Controller into a container and host it in the cluster
 
 - requires [kustomize](https://github.com/kubernetes-sigs/kustomize)
+- requires *[updating the RBAC rules](#rbac)*
 - `IMG=foo make docker-build` && `IMG=foo make docker-push`
 - `kustomize build config/default > mongodb_api.yaml`
 - `kubectl apply -f mongodb_api.yaml`
