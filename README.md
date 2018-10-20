@@ -27,12 +27,16 @@ The MongoDB Resource will manage (Create / Update) a Kubernetes **StatefulSet** 
 
 ## **Prerequisites**
 
-**Important:** Complete these steps first.
+- If you have been given a workshop GCP account with an already provisioned dev machine
+  - See [preprovisioned](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/preprovisioned/README.md#instructions-for-using-a-provisioned-workshop-development-machine)
+    instructions.
 
-**Note**: If you have been provided a pre-provisioned GCP project development account see the
-[preprovisioned](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/preprovisioned/README.md#instructions-for-using-a-provisioned-workshop-development-machine) instructions.
+- If you are setting up a local development environment (e.g. laptop)
+  - See [kubebuilder-workshop-prereqs](https://github.com/pwittrock/kubebuilder-workshop-prereqs) instructions.
 
-[kubebuilder-workshop-prereqs](https://github.com/pwittrock/kubebuilder-workshop-prereqs)
+- If you are using GCP Deployment Manager to setup a cloud dev machine
+  - See [DM](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/dm-setup/README.md#instructions-for-getting-a-development-machine)
+    instructions.
 
 ## Overview
 
