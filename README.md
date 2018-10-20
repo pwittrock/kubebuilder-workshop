@@ -78,13 +78,15 @@ type MongoDBSpec struct {
 }
 ```
 
-**Note:** Fields have been made optional by:
+##### Optional Fields
+
+Optional fields are defined by:
 
 - setting `// +optional`
 - making them pointers with `*`
 - adding the `omitempty` struct tag
 
-Documentation (Read later):
+##### Documentation (Read later)
 
 - [Resource Definition](https://book.kubebuilder.io/basics/simple_resource.html)
 - [PodSpec Example](https://github.com/kubernetes/api/blob/master/core/v1/types.go#L2715)
@@ -96,14 +98,14 @@ Update the `add` function in `pkg/controller/mongodb/mongodb_controller.go` to W
 Controller will be managing.
 
 The generated `add` stub watches Deployments *owned* by the Controller.  Instead we want to watch StatefulSets
-and Services *owned* by the Controller.
+and Services *owned* by the Controller.  Modify / copy the `Watch` configuration for Deployment.
 
-- *No-Op* - Watch MongoDB (EnqueueRequestForObject) - this was scaffolded for you
-- *Remove* - Watch Deployments - you aren't managing Deployments so remove this
-- *Add* - Watch Services - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you are managing Services so add add this
-- *Add* - Watch StatefulSets - and map to the Owning MongoDB instance (EnqueueRequestForOwner) - you are managing StatefulSets so add this
+1. *Add* - Watch Services - and map to the Owning MongoDB instance (using `EnqueueRequestForOwner`)
+1. *Add* - Watch StatefulSets - and map to the Owning MongoDB instance (using `EnqueueRequestForOwner`)
+1. *Remove* - Watch Deployments - you aren't managing Deployments so remove this
+1. *No-Op* - Watch MongoDB (EnqueueRequestForObject) - this was scaffolded for you
 
-**Package Hints:**
+##### Package Hints
 
 - the `StatefulSet` struct is in package `appsv1 "k8s.io/api/apps/v1"`
 - the `Service` struct is in package `corev1 "k8s.io/api/core/v1"`
@@ -121,32 +123,43 @@ Update the `Reconcile` function to Create / Update the StatefulSet and Service o
 The generated Reconcile stub manages (creates or updates) a static Deployment.  Instead of managing a Deployment,
 we want to manage a StatefulSet and a Service using `util` package to create the structs.
 
-Steps:
+##### Overview
 
-- Change the code that Creates / Updates a Deployment to Create / Update a Service using the `GenerateService` and `CopyServiceFields` functions
-- Copy the code to also Create / Update a StatefulSet using the `GenerateStatefulSet` and `CopyStatefulSetFields` functions
-- Run `make` (expect tests to fail because they have not been updated)
+1. Compute (generate) the desired struct instance of the Service / StatefulSet
+1. Check if the Service / StatefulSet already exists by trying to read it
+1. Either
+  - Create the Service / StatefulSet if it doesn't exist
+  - Compare the desired (generated) Service / StatefulSet to the read instance
+  - If they do not match - copy the fields to the read instance and update using the read instance
 
-**Object Generation Hints:**
+##### Steps
 
-- Make sure you have the cloned or copied the provided
-  "[github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/pkg/util/util.go)" functions
+1. Change the code that Creates / Updates a Deployment to Create / Update a Service using the `GenerateService` and `CopyServiceFields` functions
+1. Copy the code to also Create / Update a StatefulSet using the `GenerateStatefulSet` and `CopyStatefulSetFields` functions
+1. Run `make` (expect tests to fail because they have not been updated)
+
+##### Object Generation Hints
+
+- Make sure you have the provided
+  "[github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/pkg/util/util.go)"
+  functions
 - Use the functions under `pkg/util` to provide StatefulSet and Service struct instances for a MongoDB instance
   - `GenerateStatefulSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet`
   - `GenerateService(mongo metav1.Object) *corev1.Service`
-- Use the functions under `github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util` to copy fields from generated StatefulSet and Service struct instances
-  to the read instances (e.g. so you don't clobber the Service.Spec.ClusterIP field).
+- Use the functions under `github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util` to copy fields from generated
+  StatefulSet and Service struct instances to the read instances and compare them (e.g. so you don't clobber the
+  Service.Spec.ClusterIP field).
   - `CopyStatefulSetFields(from, to *appsv1.StatefulSet) bool` // Returns true if update required
   - `CopyServiceFields(from, to *corev1.Service) bool` // Returns true if update requireds
 
 **Note:** This will cause the tests to start failing because you changed the Reconcile behavior.  Don't worry
 about this for now.
 
-Documentation:
+##### Documentation
 
 - [Reconcile](https://book.kubebuilder.io/basics/simple_controller.html#implementing-controller-reconcile)
 
-#### RBAC
+##### RBAC
 
 - **Optional:** for running in cluster only - update the RBAC rules defined as comments on the `Reconcile` function
   to give read / write access for StatefulSets and Services (required when running as a container in a cluster).
@@ -219,9 +232,11 @@ spec:
 
 If you finish early, or want to continue working on your API after the workshop, try these exercises.
 
-### Build your Controller into a container and host it in the cluster
+### Run the Controller in the cluster
 
-- requires [kustomize](https://github.com/kubernetes-sigs/kustomize)
+Build your Controller into a container and host it on the cluster itself.
+
+- requires installing [kustomize](https://github.com/kubernetes-sigs/kustomize)
 - requires *[updating the RBAC rules](#rbac)*
 - `IMG=foo make docker-build` && `IMG=foo make docker-push`
 - `kustomize build config/default > mongodb_api.yaml`
