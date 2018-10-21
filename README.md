@@ -228,6 +228,10 @@ spec:
 - Try deleting the Service - what happens when you look for it?
 - Try adding fields to control new things such as the Port
 
+## Feedback
+
+- [Workshop Feedback](https://goo.gl/vgNvV1)
+
 ## Bonus Objectives
 
 If you finish early, or want to continue working on your API after the workshop, try these exercises.
