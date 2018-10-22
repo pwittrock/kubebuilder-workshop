@@ -97,7 +97,6 @@ Optional fields are defined by:
 - [Resource Definition](https://book.kubebuilder.io/basics/simple_resource.html)
 - [PodSpec Example](https://github.com/kubernetes/api/blob/master/core/v1/types.go#L2715)
 
-
 ### Step 2: Change Watches for the MongoDB Controller `add` function stub
 
 #### Break Glass
@@ -152,14 +151,18 @@ we want to manage a StatefulSet and a Service using `util` package to create the
 
 ##### Steps
 
-**Note:** Import or copy the functions from ["github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util"](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/pkg/util/util.go)
+**Note:** If you are *not* working a clone kubebuilder-workshop-prereqs project make sure you have a copy of the
+functions from ["github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util"](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/pkg/util/util.go)
 
+1. Update the *import* statement at the top of the file by adding `"github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util"`
+   (or the package you copied the functions to)
 1. Change the code that Creates / Updates a Deployment to Create / Update a Service using the `GenerateService` and `CopyServiceFields` functions
-  - Use `GenerateService(mongo metav1.Object) *corev1.Service`
-  - Use `CopyServiceFields(from, to *corev1.Service) bool` // Returns true if update requireds
+  - Use `util.GenerateService(mongo metav1.Object) *corev1.Service` to create the service struct (instead of `deploy := &appsv1.Deployment{...}`)
+  - Use `util.CopyServiceFields(from, to *corev1.Service) bool` to check if we need to update the object and copy the
+    fields (instead of `reflect.DeepEquals` and `found.Spec = deploy.Spec`)
 1. Copy the code to also Create / Update a StatefulSet using the `GenerateStatefulSet` and `CopyStatefulSetFields` functions
-  - Use `GenerateStatefulSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet`
-  - Use `CopyStatefulSetFields(from, to *appsv1.StatefulSet) bool` // Returns true if update required
+  - Use `util.GenerateStatefulSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet`
+  - Use `util.CopyStatefulSetFields(from, to *appsv1.StatefulSet) bool`
 1. Run `make` (expect tests to fail because they have not been updated)
 
 **Note:** This will cause the tests to start failing because you changed the Reconcile behavior.  Don't worry
