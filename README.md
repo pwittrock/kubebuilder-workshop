@@ -59,6 +59,8 @@ correctly.
   
 ### Step 1: Add a Schema to the MongoDB Resource stub
 
+**Note:** If you get stuck - see the completed solution for this step [here](pkg/apis/databases/v1alpha1/mongodb_types.go)
+
 Change the MongoDB API Schema (e.g. *MongoDBSpec*) in `pkg/apis/databases/v1alpha1/mongodb_types.go`.
 
 Start with 2 optional fields:
@@ -66,7 +68,7 @@ Start with 2 optional fields:
 - `replicas` (int32)
 - `storage` (string)
 
-**Note:** Simply copy the following Spec, and optionally revisit later to add more fields.
+**Note:** Simply update the stubbed MongoDBSpec with the following code.
 
 ```go
 type MongoDBSpec struct {
@@ -94,6 +96,8 @@ Optional fields are defined by:
 
 ### Step 2: Change Watches for the MongoDB Controller `add` function stub
 
+**Note:** If you get stuck - see the completed solution for this step [here](pkg/controller/mongodb/mongodb_controller.go)
+
 Update the `add` function in `pkg/controller/mongodb/mongodb_controller.go` to Watch the Resources the
 Controller will be managing.
 
@@ -103,7 +107,7 @@ and Services *owned* by the Controller.  Modify / copy the `Watch` configuration
 1. *Add* - Watch Services - and map to the Owning MongoDB instance (using `EnqueueRequestForOwner`)
 1. *Add* - Watch StatefulSets - and map to the Owning MongoDB instance (using `EnqueueRequestForOwner`)
 1. *Remove* - Watch Deployments - you aren't managing Deployments so remove this
-1. *No-Op* - Watch MongoDB (EnqueueRequestForObject) - this was scaffolded for you
+1. *No-Op* - Watch MongoDB (EnqueueRequestForObject) - this was stubbed for you
 
 ##### Package Hints
 
@@ -116,6 +120,8 @@ See the following for documentation on Watches:
 - [Advanced Watch](https://book.kubebuilder.io/beyond_basics/controller_watches.html)
 
 ### Step 3: Change logic in the MongoDB Controller `Reconcile` function stub
+
+**Note:** If you get stuck - see the completed solution for this step [here](pkg/controller/mongodb/mongodb_controller.go)
 
 Update the `Reconcile` function to Create / Update the StatefulSet and Service objects to run MongoDB in
 `pkg/controller/mongodb/mongodb_controller.go`.
@@ -134,23 +140,15 @@ we want to manage a StatefulSet and a Service using `util` package to create the
 
 ##### Steps
 
+**Note:** Import or copy the functions from ["github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util"](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/pkg/util/util.go)
+
 1. Change the code that Creates / Updates a Deployment to Create / Update a Service using the `GenerateService` and `CopyServiceFields` functions
+  - Use `GenerateService(mongo metav1.Object) *corev1.Service`
+  - Use `CopyServiceFields(from, to *corev1.Service) bool` // Returns true if update requireds
 1. Copy the code to also Create / Update a StatefulSet using the `GenerateStatefulSet` and `CopyStatefulSetFields` functions
+  - Use `GenerateStatefulSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet`
+  - Use `CopyStatefulSetFields(from, to *appsv1.StatefulSet) bool` // Returns true if update required
 1. Run `make` (expect tests to fail because they have not been updated)
-
-##### Object Generation Hints
-
-- Make sure you have the provided
-  "[github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/pkg/util/util.go)"
-  functions
-- Use the functions under `pkg/util` to provide StatefulSet and Service struct instances for a MongoDB instance
-  - `GenerateStatefulSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet`
-  - `GenerateService(mongo metav1.Object) *corev1.Service`
-- Use the functions under `github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util` to copy fields from generated
-  StatefulSet and Service struct instances to the read instances and compare them (e.g. so you don't clobber the
-  Service.Spec.ClusterIP field).
-  - `CopyStatefulSetFields(from, to *appsv1.StatefulSet) bool` // Returns true if update required
-  - `CopyServiceFields(from, to *corev1.Service) bool` // Returns true if update requireds
 
 **Note:** This will cause the tests to start failing because you changed the Reconcile behavior.  Don't worry
 about this for now.
@@ -240,7 +238,8 @@ If you finish early, or want to continue working on your API after the workshop,
 
 Build your Controller into a container and host it on the cluster itself.
 
-- requires installing [kustomize](https://github.com/kubernetes-sigs/kustomize)
+- requires installing [kustomize](https://github.com/kubernetes-sigs/kustomize/releases)
+- requires installing [docker](https://docs.docker.com/install/)
 - requires *[updating the RBAC rules](#rbac)*
 - `IMG=foo make docker-build` && `IMG=foo make docker-push`
 - `kustomize build config/default > mongodb_api.yaml`

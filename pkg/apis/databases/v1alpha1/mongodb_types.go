@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2018 The Kubernetes authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,10 +20,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+/**
+ * This is the completed workshop solution.
+ */
 
-// MongoDBSpec defines the desired state of MongoDB
+ // MongoDBSpec defines the desired state of MongoDB
 type MongoDBSpec struct {
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`

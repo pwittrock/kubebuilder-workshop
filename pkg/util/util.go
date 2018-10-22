@@ -25,11 +25,11 @@ import (
 	"reflect"
 )
 
-// GenerateStatefuleSet returns a new appsv1.StatefulSet pointer generated for the MongoDB instance
+// GenerateStatefulSe returns a new appsv1.StatefulSet pointer generated for the MongoDB instance
 // object: MongoDB instance
 // replicas: the number of replicas for the MongoDB instance
 // storage: the size of the storage for the MongoDB instance (e.g. 100Gi)
-func GenerateStatefuleSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet {
+func GenerateStatefulSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet {
 	gracePeriodTerm := int64(10)
 
 	// TODO: Default and Validate these with Webhooks

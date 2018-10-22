@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - apps
   resources:
-  - statefulesets
+  - statefulsets
   verbs:
   - get
   - list

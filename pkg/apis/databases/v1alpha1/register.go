@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2018 The Kubernetes authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ limitations under the License.
 // Package v1alpha1 contains API Schema definitions for the databases v1alpha1 API group
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen=package,register
-// +k8s:conversion-gen=github.com/pwittrock/kubebuilder-workshop/pkg/apis/databases
+// +k8s:conversion-gen=github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/apis/databases
 // +k8s:defaulter-gen=TypeMeta
 // +groupName=databases.k8s.io
 package v1alpha1
