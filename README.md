@@ -59,7 +59,11 @@ correctly.
   
 ### Step 1: Add a Schema to the MongoDB Resource stub
 
-**Note:** If you get stuck - see the completed solution for this step [here](pkg/apis/databases/v1alpha1/mongodb_types.go)
+#### Break Glass
+ 
+If you get stuck - see the completed solution for this step [here](https://github.com/pwittrock/kubebuilder-workshop/blob/master/pkg/apis/databases/v1alpha1/mongodb_types.go#L28)
+
+##### Instructions
 
 Change the MongoDB API Schema (e.g. *MongoDBSpec*) in `pkg/apis/databases/v1alpha1/mongodb_types.go`.
 
@@ -96,7 +100,11 @@ Optional fields are defined by:
 
 ### Step 2: Change Watches for the MongoDB Controller `add` function stub
 
-**Note:** If you get stuck - see the completed solution for this step [here](pkg/controller/mongodb/mongodb_controller.go)
+#### Break Glass
+
+If you get stuck - see the completed solution for this step [here](https://github.com/pwittrock/kubebuilder-workshop/blob/master/pkg/controller/mongodb/mongodb_controller.go#L67)
+
+#### Instructions
 
 Update the `add` function in `pkg/controller/mongodb/mongodb_controller.go` to Watch the Resources the
 Controller will be managing.
@@ -121,7 +129,11 @@ See the following for documentation on Watches:
 
 ### Step 3: Change logic in the MongoDB Controller `Reconcile` function stub
 
-**Note:** If you get stuck - see the completed solution for this step [here](pkg/controller/mongodb/mongodb_controller.go)
+#### Break Glass
+
+If you get stuck - see the completed solution for this step [here](https://github.com/pwittrock/kubebuilder-workshop/blob/master/pkg/controller/mongodb/mongodb_controller.go#L114)
+
+#### Instructions
 
 Update the `Reconcile` function to Create / Update the StatefulSet and Service objects to run MongoDB in
 `pkg/controller/mongodb/mongodb_controller.go`.
