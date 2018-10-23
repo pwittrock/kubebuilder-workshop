@@ -237,7 +237,7 @@ spec:
 - delete the mongodb instance
   - `kubectl delete -f config/samples/databases_v1alpha1_mongodb.yaml`
 - look for garbage collected resources (they should be gone)
-  - `kubectl get monogodbs`
+  - `kubectl get mongodbs`
   - `kubectl get statefulsets`
   - `kubectl get services`
   - `kubectl get pods`
