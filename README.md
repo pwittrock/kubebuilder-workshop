@@ -132,6 +132,9 @@ See the following for documentation on Watches:
 
 If you get stuck - see the completed solution for this step [here](https://github.com/pwittrock/kubebuilder-workshop/blob/master/pkg/controller/mongodb/mongodb_controller.go#L114)
 
+**Important:** The break-glass link has a different `util` import than you will use
+(kubebuilder-workshop instead of kubebuilder-workshop-prereqs).
+
 #### Instructions
 
 Update the `Reconcile` function to Create / Update the StatefulSet and Service objects to run MongoDB in
@@ -151,11 +154,11 @@ we want to manage a StatefulSet and a Service using `util` package to create the
 
 ##### Steps
 
-**Note:** If you are *not* working a clone kubebuilder-workshop-prereqs project make sure you have a copy of the
-functions from ["github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util"](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/pkg/util/util.go)
-
 1. Update the *import* statement at the top of the file by adding `"github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util"`
-   (or the package you copied the functions to)
+   (if you cloned the kubebuilder-workshop-prereqs project you should able to see them under `pkg/util`)
+  - **Note:** If you did not clone the kubebuilder-workshop-prereqs project, *and* you are not using a preprovisioned
+    GCE development VM, you will have needed to copy [these functions](https://github.com/pwittrock/kubebuilder-workshop-prereqs/blob/master/pkg/util/util.go)
+    into your project - as described in the [prereqs](https://github.com/pwittrock/kubebuilder-workshop-prereqs#create-a-new-kubebuilder-project-pick-1).
 1. Change the code that Creates / Updates a Deployment to Create / Update a Service using the `GenerateService` and `CopyServiceFields` functions
   - Use `util.GenerateService(mongo metav1.Object) *corev1.Service` to create the service struct (instead of `deploy := &appsv1.Deployment{...}`)
   - Use `util.CopyServiceFields(from, to *corev1.Service) bool` to check if we need to update the object and copy the
@@ -163,6 +166,7 @@ functions from ["github.com/pwittrock/kubebuilder-workshop-prereqs/pkg/util"](ht
 1. Copy the code to also Create / Update a StatefulSet using the `GenerateStatefulSet` and `CopyStatefulSetFields` functions
   - Use `util.GenerateStatefulSet(mongo metav1.Object, replicas *int32, storage *string) *appsv1.StatefulSet`
   - Use `util.CopyStatefulSetFields(from, to *appsv1.StatefulSet) bool`
+1. Delete unused imports `reflect` and `metav1`
 1. Run `make` (expect tests to fail because they have not been updated)
 
 **Note:** This will cause the tests to start failing because you changed the Reconcile behavior.  Don't worry
@@ -184,6 +188,9 @@ about this for now.
 
 Now that you have finished implementing the MongoDB API, lets try it out in a Kubernetes cluster.
 
+**Remember:** The tests will have started to fail because you changed the Reconcile behavior in Step 3.
+Don't worry about this for now.
+
 ### Install the Resource into the Cluster
 
 - `make install` # install the CRDs
@@ -191,6 +198,8 @@ Now that you have finished implementing the MongoDB API, lets try it out in a Ku
 ### Run the Controller locally
 
 - `make run` # run the controller as a local process
+  - **Note:** this will not return, you will need to open another
+    shell or send it to the background for the next steps.
 
 ### Edit the sample MongoDB file
 
@@ -213,13 +222,18 @@ spec:
 ### Check out the Resources in the cluster
 
 - look at created resources
-  - `kubectl get monogodbs`
-  - `kubectl get statefulsets`
-  - `kubectl get services`
-  - `kubectl get pods`
+  - `kubectl get monogodbs,statefulsets,services,pods` (no spaces)
     - **note**: the containers may be creating - wait for them to come up
   - `kubectl describe pods`
   - `kubectl logs mongo-instance-mongodb-statefulset-0 mongo`
+
+### Connect to the running MongoDB instance from within the cluster using a Pod
+
+- `kubectl run mongo-test -t -i --rm --image mongo bash`
+- `mongo <cluster ip address of mongodb service>:27017`
+
+### Verify Garbage Collection is working
+
 - delete the mongodb instance
   - `kubectl delete -f config/samples/databases_v1alpha1_mongodb.yaml`
 - look for garbage collected resources (they should be gone)
@@ -229,11 +243,6 @@ spec:
   - `kubectl get pods`
 - recreate the MongoDB instance
   - `kubectl apply -f config/samples/databases_v1alpha1_mongodb.yaml`
-
-### Connect to the running MongoDB instance from within the cluster using a Pod
-
-- `kubectl run mongo-test -t -i --rm --image mongo bash`
-- `mongo <cluster ip address of mongodb service>:27017`
 
 ## Experiment some more
 
