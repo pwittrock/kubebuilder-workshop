@@ -222,7 +222,7 @@ spec:
 ### Check out the Resources in the cluster
 
 - look at created resources
-  - `kubectl get monogodbs,statefulsets,services,pods` (no spaces)
+  - `kubectl get mongodbs,statefulsets,services,pods` (no spaces)
     - **note**: the containers may be creating - wait for them to come up
   - `kubectl describe pods`
   - `kubectl logs mongo-instance-mongodb-statefulset-0 mongo`
