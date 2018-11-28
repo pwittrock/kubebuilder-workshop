@@ -25,6 +25,10 @@ The MongoDB Resource will manage (Create / Update) a Kubernetes **StatefulSet** 
 
 **Note**: This repo contains a full solution to the workshop exercise if you get stuck.
 
+## Slides
+
+[Posted Here](https://goo.gl/AUuCCT)
+
 ## **Prerequisites**
 
 - If you have been given a workshop GCP account with an already provisioned dev machine
