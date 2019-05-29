@@ -1,17 +1,22 @@
 # Build the manager binary
-FROM golang:1.10.3 as builder
+FROM golang:1.12.5 as builder
 
-# Copy in the go src
-WORKDIR /go/src/github.com/pwittrock/kubebuilder-workshop
-COPY pkg/    pkg/
-COPY cmd/    cmd/
-COPY vendor/ vendor/
+WORKDIR /workspace
+# Copy the go source
+COPY main.go main.go
+COPY api/ api/
+COPY controllers/ controllers/
+# Copy the Go Modules manifests
+COPY go.mod go.mod
+COPY go.sum go.sum
+
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager github.com/pwittrock/kubebuilder-workshop/cmd/manager
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
 
-# Copy the controller-manager into a thin image
-FROM ubuntu:latest
-WORKDIR /root/
-COPY --from=builder /go/src/github.com/pwittrock/kubebuilder-workshop/manager .
-ENTRYPOINT ["./manager"]
+# Use distroless as minimal base image to package the manager binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+FROM gcr.io/distroless/static:latest
+WORKDIR /
+COPY --from=builder /workspace/manager .
+ENTRYPOINT ["/manager"]
