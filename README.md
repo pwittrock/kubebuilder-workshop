@@ -117,10 +117,10 @@ This is necessary to read / write the objects from the client
 
 ```go
 func init() {
-
-	databasesv1alpha1.AddToScheme(scheme)
 	appsv1.AddToScheme(scheme)
 	corev1.AddToScheme(scheme)
+
+	databasesv1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 ```
@@ -199,7 +199,7 @@ func (r *MongoDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 ```go
     //
-	// Generate Service
+	// Generate Service object managed by MongoDB
 	//
 	
 	// Init Service struct to create or update
@@ -226,7 +226,7 @@ func (r *MongoDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 ```go
     //
-	// Generate StatefulSet
+	// Generate StatefulSet managed by MongoDB
 	//
 	
 	// Init StatefulSet struct to create or update
@@ -254,7 +254,7 @@ func (r *MongoDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 ```go
     //
-    // Update the MongoDB status
+    // Update the MongoDB status so it gets published to users
     //
     
     // Retrieve the StatefulSet status and copy to MongoDB
