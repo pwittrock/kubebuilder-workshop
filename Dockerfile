@@ -2,13 +2,17 @@
 FROM golang:1.12.5 as builder
 
 WORKDIR /workspace
+
+# Copy the Go Modules manifests
+COPY go.mod go.mod
+COPY go.sum go.sum
+RUN go mod download
+
 # Copy the go source
 COPY main.go main.go
 COPY api/ api/
 COPY controllers/ controllers/
-# Copy the Go Modules manifests
-COPY go.mod go.mod
-COPY go.sum go.sum
+COPY util/ util/
 
 
 # Build

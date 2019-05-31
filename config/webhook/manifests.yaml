@@ -1,0 +1,26 @@
+
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: mutating-webhook-configuration
+webhooks:
+- clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-example-com-v1alpha1-mongodbs
+  failurePolicy: Fail
+  name: mongodbs.example.com
+  rules:
+  - apiGroups:
+    - databases.example.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - mongodbs

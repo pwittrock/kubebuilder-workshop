@@ -66,6 +66,7 @@ type MongoDBSpec struct {
     // storage is the volume size for each instance
 	// +optional
 	Storage *string `json:"storage,omitempty"`
+	
 }
 ```
 
@@ -79,6 +80,8 @@ type MongoDBStatus struct {
 
 	// serviceStatus contains the status of the Service managed by MongoDB
 	ServiceStatus corev1.ServiceStatus `json:"serviceStatus,omitempty"`
+
+	ClusterIP string `json:"clusterIP,omitempty"`
 }
 ```
 
@@ -91,6 +94,7 @@ These tell kubectl how to print the object.
 // +kubebuilder:printcolumn:name="replicas",type="integer",JSONPath=".spec.replicas",format="int32"
 // +kubebuilder:printcolumn:name="ready replicas",type="integer",JSONPath=".status.statefulSetStatus.readyReplicas",format="int32"
 // +kubebuilder:printcolumn:name="current replicas",type="integer",JSONPath=".status.statefulSetStatus.currentReplicas",format="int32"
+// +kubebuilder:printcolumn:name="cluster-ip",type="string",JSONPath=".status.clusterIP",format="byte"
 ```
 
 ### Add the status subresource
@@ -274,6 +278,7 @@ func (r *MongoDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return ctrl.Result{}, err
 	}
 	mongo.Status.ServiceStatus = service.Status
+	mongo.Status.ClusterIP = service.Spec.ClusterIP
 
     // Update the MongoDB status field using the "status" subresource
 	err = r.Status().Update(ctx, mongo)
@@ -355,3 +360,54 @@ $ kubectl get mongodbs
 $ kubectl delete -f config/samples/databases_v1alpha1_mongodb.yaml
 $ kubectl get mongodbs,statefulsets,services,pods
 ```
+
+## Publishing and running in-cluster
+
+Give yourself cluster permissions:
+
+```bash
+# install docker plugin for gcr.io
+$ gcloud components install docker-credential-gcr
+$ docker-credential-gcr configure-docker
+
+# add cluster-admin permission
+$ kubectl create clusterrolebinding <user>-cluster-admin-binding --clusterrole=cluster-admin --user=<email>
+
+# build and push the image
+$ docker build . -t gcr.io/<project>/kubebuilder-workshop:v1
+$ docker push gcr.io/<project>/kubebuilder-workshop:v1
+```
+
+Modify the Dockerfile to move the deps earlier in the pipeline
+
+```bash
+# Copy the Go Modules manifests
+COPY go.mod go.mod
+COPY go.sum go.sum
+RUN go mod download
+```
+
+Modify the Dockerfile to copy new package dirs
+
+```bash
+COPY util/ util/
+```
+
+Update `config/default/manager_image_patch.yaml` with the new image name
+
+```bash
+kubectl apply -k  config/default/
+```
+
+
+## Doing Defaulting and Validation with Webhooks
+
+### Install Cert Manager
+
+```bash
+https://docs.cert-manager.io/en/latest/getting-started/install/kubernetes.html#installing-with-regular-manifests
+```
+
+### Update Manifests to install webhook and cainjection
+
+update `config/default/kustomization.yaml`
