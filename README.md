@@ -371,7 +371,7 @@ $ gcloud components install docker-credential-gcr
 $ docker-credential-gcr configure-docker
 
 # add cluster-admin permission
-$ kubectl create clusterrolebinding <user>-cluster-admin-binding --clusterrole=cluster-admin --user=<email>
+$ kubectl create clusterrolebinding kubebuilder-workshop-cluster-admin-binding --clusterrole cluster-admin --user $(gcloud config get-value account)
 
 # build and push the image
 $ docker build . -t gcr.io/<project>/kubebuilder-workshop:v1
