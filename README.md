@@ -59,14 +59,13 @@ Modify the MongoDB API Schema (e.g. *MongoDBSpec*) in `api/v1alpha1/mongodb_type
 // MongoDBSpec defines the desired state of MongoDB
 type MongoDBSpec struct {
 	// replicas is the number of MongoDB replicas
-    // +kubebuilder:validation:Minimum=1
+    // +kubebuilder:validation:Minimum=0
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 
     // storage is the volume size for each instance
 	// +optional
-	Storage *string `json:"storage,omitempty"`
-	
+	Storage *string `json:"storage,omitempty"`	
 }
 ```
 
@@ -190,8 +189,6 @@ func (r *MongoDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Fetch the MongoDB instance
 	mongo := &databasesv1alpha1.MongoDB{}
 	if err := r.Get(ctx, req.NamespacedName, mongo); err != nil {
-		// If the object was deleted, it will not be found.  Do nothing.
-		log.Error(err, "unable to fetch MongoDB")
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -234,19 +231,19 @@ func (r *MongoDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	//
 	
 	// Init StatefulSet struct to create or update
-	ss := &appsv1.StatefulSet{
+	stateful := &appsv1.StatefulSet{
 		ObjectMeta: ctrl.ObjectMeta{
 			Name:      req.Name + "-mongodb-statefulset",
 			Namespace: req.Namespace,
 		},
 	}
 	// Either create or update the StatefulSet
-	_, err = ctrl.CreateOrUpdate(ctx, r.Client, ss, func() error {
+	_, err = ctrl.CreateOrUpdate(ctx, r.Client, stateful, func() error {
         // Set the StatefulSet fields to the correct values
-		util.SetStatefulSetFields(ss, service, mongo, mongo.Spec.Replicas, mongo.Spec.Storage)
+		util.SetStatefulSetFields(stateful, service, mongo, mongo.Spec.Replicas, mongo.Spec.Storage)
 
 		// Add the owners reference to the MongoDB instance so the StatefulSet gets garbage collected
-		return controllerutil.SetControllerReference(mongo, ss, r.Scheme)
+		return controllerutil.SetControllerReference(mongo, stateful, r.Scheme)
 
 	})
 	if err != nil {
@@ -262,21 +259,9 @@ func (r *MongoDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
     //
     
     // Retrieve the StatefulSet status and copy to MongoDB
-	ssNN := req.NamespacedName
-	ssNN.Name = ss.Name
-	if err := r.Get(ctx, ssNN, ss); err != nil {
-		log.Error(err, "unable to fetch StatefulSet", "namespaceName", ssNN)
-		return ctrl.Result{}, err
-	}
-	mongo.Status.StatefulSetStatus = ss.Status
+	mongo.Status.StatefulSetStatus = stateful.Status
 
     // Retrieve the Service status and copy to MongoDB
-	serviceNN := req.NamespacedName
-	serviceNN.Name = service.Name
-	if err := r.Get(ctx, serviceNN, service); err != nil {
-		log.Error(err, "unable to fetch Service", "namespaceName", serviceNN)
-		return ctrl.Result{}, err
-	}
 	mongo.Status.ServiceStatus = service.Status
 	mongo.Status.ClusterIP = service.Spec.ClusterIP
 
@@ -305,6 +290,8 @@ $ kubectl get mongodbs,statefulsets,services,pods
 
 
 ### Run the Controller locally
+
+**Note:** Update `main.go` to disable leader election for running locally.
 
 ```bash
 $ make run
@@ -387,7 +374,7 @@ COPY go.sum go.sum
 RUN go mod download
 ```
 
-Modify the Dockerfile to copy new package dirs
+**Note:** Modify the Dockerfile to copy new package dirs
 
 ```bash
 COPY util/ util/
