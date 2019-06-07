@@ -47,7 +47,8 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
-		LeaderElection:     true,
+		// Uncomment for production
+		// LeaderElection:     true,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
