@@ -258,10 +258,7 @@ func (r *MongoDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
     // Update the MongoDB status so it gets published to users
     //
     
-    // Retrieve the StatefulSet status and copy to MongoDB
 	mongo.Status.StatefulSetStatus = stateful.Status
-
-    // Retrieve the Service status and copy to MongoDB
 	mongo.Status.ServiceStatus = service.Status
 	mongo.Status.ClusterIP = service.Spec.ClusterIP
 
