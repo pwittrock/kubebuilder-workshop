@@ -112,76 +112,7 @@ This allows `kubectl scale` work.
 // +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.statefulSetStatus.replicas
 ```
 
-## Update main.go
-
-### Add StatefulSets and Services to the Scheme
-
-This is necessary to read / write the objects from the client
-
-```go
-func init() {
-	appsv1.AddToScheme(scheme)
-	corev1.AddToScheme(scheme)
-
-	databasesv1alpha1.AddToScheme(scheme)
-	// +kubebuilder:scaffold:scheme
-}
-```
-
-### Pass the Scheme and Recorder to the Controller
-
-This will be needed later for setting owners references
-
-main.go
-
-```go
-	err = (&controllers.MongoDBReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("MongoDB"),
-		Recorder: mgr.GetEventRecorderFor("mongodb"),
-		Scheme:   mgr.GetScheme(),
-	}).SetupWithManager(mgr)
-	if err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "MongoDB")
-		os.Exit(1)
-	}
-```
-
-mongodb_controller.go
-
-```go
-type MongoDBReconciler struct {
-	client.Client
-	Log      logr.Logger
-	Recorder record.EventRecorder
-	Scheme   *runtime.Scheme
-}
-```
-
 ## Implement the Controller
-
-### Add StatefulSet and Service RBAC markers
-
-Add an RBAC rule so the Controller can read / write StatuefulSets and Services
-
-```go
-// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
-```
-
-### Watch StatefulSets and Services
-
-Update the `SetupWithManager` function to configure MondoDB to own StatefulSets and Services.
-
-```go
-func (r *MongoDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.MongoDB{}).
-		Owns(&appsv1.StatefulSet{}). // Generates StatefulSets
-		Owns(&corev1.Service{}).     // Generates Services
-		Complete(r)
-}
-```
 
 ### Read MongoDB from Reconcile
 
@@ -269,6 +200,74 @@ func (r *MongoDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 ```
 
+### Watch StatefulSets and Services
+
+Update the `SetupWithManager` function to configure MondoDB to own StatefulSets and Services.
+
+```go
+func (r *MongoDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.MongoDB{}).
+		Owns(&appsv1.StatefulSet{}). // Generates StatefulSets
+		Owns(&corev1.Service{}).     // Generates Services
+		Complete(r)
+}
+```
+
+### Add StatefulSet and Service RBAC markers
+
+Add an RBAC rule so the Controller can read / write StatuefulSets and Services
+
+```go
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
+```
+
+## Update main.go
+
+### Add StatefulSets and Services to the Scheme
+
+This is necessary to read / write the objects from the client
+
+```go
+func init() {
+	appsv1.AddToScheme(scheme)
+	corev1.AddToScheme(scheme)
+
+	databasesv1alpha1.AddToScheme(scheme)
+	// +kubebuilder:scaffold:scheme
+}
+```
+
+### Pass the Scheme and Recorder to the Controller
+
+This will be needed later for setting owners references
+
+main.go
+
+```go
+	err = (&controllers.MongoDBReconciler{
+		Client:   mgr.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("MongoDB"),
+		Recorder: mgr.GetEventRecorderFor("mongodb"),
+		Scheme:   mgr.GetScheme(),
+	}).SetupWithManager(mgr)
+	if err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "MongoDB")
+		os.Exit(1)
+	}
+```
+
+mongodb_controller.go
+
+```go
+type MongoDBReconciler struct {
+	client.Client
+	Log      logr.Logger
+	Recorder record.EventRecorder
+	Scheme   *runtime.Scheme
+}
+```
 
 ## Run the API
 
