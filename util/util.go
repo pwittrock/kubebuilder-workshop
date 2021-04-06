@@ -71,7 +71,7 @@ func SetStatefulSetFields(ss *appsv1.StatefulSet, service *corev1.Service, mongo
 				{
 					Name:         "mongo",
 					Image:        "mongo",
-					Command:      []string{"mongod", "--replSet", "rs0", "--smallfiles", "--noprealloc", "--bind_ip_all"},
+					Command:      []string{"mongod", "--replSet", "rs0", "--bind_ip_all"},
 					Ports:        []corev1.ContainerPort{{ContainerPort: 27017}},
 					VolumeMounts: []corev1.VolumeMount{{Name: "mongo-persistent-storage", MountPath: "/data/db"}},
 				},
